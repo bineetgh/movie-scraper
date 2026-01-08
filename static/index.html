@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Movies India</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #e94560, #f39c12);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            max-width: 600px;
+            margin: 30px auto;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .search-box input::placeholder {
+            color: #888;
+        }
+
+        .search-box input:focus {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .search-box button {
+            padding: 15px 30px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(90deg, #e94560, #f39c12);
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-box button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 50px;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .tab:hover, .tab.active {
+            background: rgba(233, 69, 96, 0.3);
+            border-color: #e94560;
+        }
+
+        .tab.mylist-tab {
+            border-color: #f39c12;
+        }
+
+        .tab.mylist-tab:hover, .tab.mylist-tab.active {
+            background: rgba(243, 156, 18, 0.3);
+            border-color: #f39c12;
+        }
+
+        .tab .badge {
+            display: inline-block;
+            background: #f39c12;
+            color: #1a1a2e;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: 700;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .filters select {
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .filters select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 15px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .movie-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .movie-card.in-list {
+            border: 2px solid #f39c12;
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #2d3436, #636e72);
+        }
+
+        .movie-info {
+            padding: 20px;
+        }
+
+        .movie-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .movie-meta {
+            display: flex;
+            gap: 15px;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .movie-rating {
+            color: #f39c12;
+            font-weight: 600;
+        }
+
+        .movie-synopsis {
+            font-size: 0.85rem;
+            color: #aaa;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .movie-services {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .service-tag {
+            padding: 5px 12px;
+            background: rgba(233, 69, 96, 0.2);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #e94560;
+        }
+
+        .movie-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .watch-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(90deg, #e94560, #f39c12);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            transition: transform 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .watch-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .list-btn {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #f39c12;
+            background: transparent;
+            color: #f39c12;
+        }
+
+        .list-btn:hover {
+            background: rgba(243, 156, 18, 0.2);
+        }
+
+        .list-btn.in-list {
+            background: #f39c12;
+            color: #1a1a2e;
+        }
+
+        .list-btn.in-list:hover {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            color: #fff;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+        }
+
+        .no-results-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e94560;
+        }
+
+        .stat-value.mylist {
+            color: #f39c12;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+
+        .toast.removed {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .empty-list {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-list-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-list h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        .empty-list p {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Free Movies India</h1>
+            <p>Discover free movies to watch on JioHotstar, MX Player, Zee5, Plex & more</p>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search for a movie..." onkeypress="if(event.key==='Enter') searchMovies()">
+            <button onclick="searchMovies()">Search</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="top" onclick="showTab('top', this)">Top Rated</button>
+            <button class="tab" data-tab="random" onclick="showTab('random', this)">Random Picks</button>
+            <button class="tab" data-tab="all" onclick="showTab('all', this)">Browse All</button>
+            <button class="tab mylist-tab" data-tab="mylist" onclick="showTab('mylist', this)">My List <span class="badge" id="myListBadge">0</span></button>
+        </div>
+
+        <div class="filters" id="filtersContainer">
+            <select id="serviceFilter" onchange="applyFilters()">
+                <option value="">All Services</option>
+            </select>
+            <select id="ratingFilter" onchange="applyFilters()">
+                <option value="0">Any Rating</option>
+                <option value="6">IMDb 6+</option>
+                <option value="7">IMDb 7+</option>
+                <option value="8">IMDb 8+</option>
+            </select>
+        </div>
+
+        <div class="stats" id="stats"></div>
+
+        <div id="moviesContainer">
+            <div class="loading">Loading movies</div>
+        </div>
+
+        <footer>
+            Powered by JustWatch & Internet Archive | Free Movies India API
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '';
+        const STORAGE_KEY = 'myMovieList';
+        let currentTab = 'top';
+        let allServices = [];
+
+        // --- Local Storage Functions ---
+        function getMyList() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error('Error reading from localStorage:', e);
+                return [];
+            }
+        }
+
+        function saveMyList(list) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+                updateMyListBadge();
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+            }
+        }
+
+        function isInMyList(movie) {
+            const list = getMyList();
+            return list.some(m => m.title === movie.title && m.year === movie.year);
+        }
+
+        function addToMyList(movie) {
+            const list = getMyList();
+            if (!isInMyList(movie)) {
+                list.push(movie);
+                saveMyList(list);
+                showToast(`Added "${movie.title}" to your list`, 'success');
+                return true;
+            }
+            return false;
+        }
+
+        function removeFromMyList(movie) {
+            let list = getMyList();
+            const initialLength = list.length;
+            list = list.filter(m => !(m.title === movie.title && m.year === movie.year));
+            if (list.length < initialLength) {
+                saveMyList(list);
+                showToast(`Removed "${movie.title}" from your list`, 'removed');
+                return true;
+            }
+            return false;
+        }
+
+        function handleListClick(buttonEl) {
+            const movieId = buttonEl.getAttribute('data-movie-id');
+            const movie = window.movieDataStore[movieId];
+            if (!movie) {
+                console.error('Movie not found:', movieId);
+                return;
+            }
+            toggleMyList(movie, buttonEl);
+        }
+
+        function toggleMyList(movie, buttonEl) {
+            if (isInMyList(movie)) {
+                removeFromMyList(movie);
+                buttonEl.classList.remove('in-list');
+                buttonEl.textContent = '+ Add to List';
+                buttonEl.closest('.movie-card').classList.remove('in-list');
+
+                // If we're on My List tab, refresh the view
+                if (currentTab === 'mylist') {
+                    showMyList();
+                }
+            } else {
+                addToMyList(movie);
+                buttonEl.classList.add('in-list');
+                buttonEl.textContent = '✓ In My List';
+                buttonEl.closest('.movie-card').classList.add('in-list');
+            }
+            // Update stats
+            updateMyListBadge();
+        }
+
+        function updateMyListBadge() {
+            const count = getMyList().length;
+            document.getElementById('myListBadge').textContent = count;
+        }
+
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- API Functions ---
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(API_BASE + endpoint);
+                if (!response.ok) throw new Error('API error');
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('moviesContainer').innerHTML = '<div class="loading">Loading movies</div>';
+        }
+
+        function showNoResults(message = 'No movies found') {
+            document.getElementById('moviesContainer').innerHTML = `<div class="no-results"><div class="no-results-icon">🎬</div>${message}</div>`;
+        }
+
+        function getPosterUrl(movie) {
+            if (movie.poster_url) {
+                return movie.poster_url.replace('{format}', 'webp');
+            }
+            return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect fill="%232d3436"/><text x="150" y="100" fill="%23636e72" text-anchor="middle" font-size="14">No Poster</text></svg>';
+        }
+
+        function getMovieId(movie) {
+            return btoa(encodeURIComponent(`${movie.title}_${movie.year}`)).replace(/[^a-zA-Z0-9]/g, '');
+        }
+
+        function renderMovies(movies, isMyListView = false) {
+            if (!movies || movies.length === 0) {
+                if (isMyListView) {
+                    document.getElementById('moviesContainer').innerHTML = `
+                        <div class="empty-list">
+                            <div class="empty-list-icon">📋</div>
+                            <h3>Your list is empty</h3>
+                            <p>Browse movies and click "Add to List" to save them here</p>
+                        </div>
+                    `;
+                } else {
+                    showNoResults();
+                }
+                return;
+            }
+
+            const html = movies.map((movie, index) => {
+                const inList = isInMyList(movie);
+                const movieId = `movie_${index}_${Date.now()}`;
+
+                // Store movie data globally for access by click handler
+                window.movieDataStore = window.movieDataStore || {};
+                window.movieDataStore[movieId] = movie;
+
+                return `
+                <div class="movie-card ${inList ? 'in-list' : ''}">
+                    <img class="movie-poster" src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 200%22><rect fill=%22%232d3436%22/></svg>'">
+                    <div class="movie-info">
+                        <div class="movie-title" title="${movie.title}">${movie.title}</div>
+                        <div class="movie-meta">
+                            ${movie.year ? `<span>${movie.year}</span>` : ''}
+                            ${movie.rating ? `<span class="movie-rating">IMDb ${movie.rating}</span>` : ''}
+                            ${movie.runtime_minutes ? `<span>${movie.runtime_minutes} min</span>` : ''}
+                        </div>
+                        <div class="movie-synopsis">${movie.synopsis || 'No description available.'}</div>
+                        <div class="movie-services">
+                            ${movie.streaming_services.map(s => `<span class="service-tag">${s}</span>`).join('')}
+                        </div>
+                        <div class="movie-actions">
+                            ${movie.source_urls && movie.source_urls.length > 0 ?
+                                `<a href="${movie.source_urls[0]}" target="_blank" class="watch-btn">Watch Now</a>` : ''}
+                            <button class="list-btn ${inList ? 'in-list' : ''}" data-movie-id="${movieId}" onclick="handleListClick(this)">
+                                ${inList ? '✓ In My List' : '+ Add to List'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            document.getElementById('moviesContainer').innerHTML = `<div class="movies-grid">${html}</div>`;
+        }
+
+        async function loadServices() {
+            const data = await fetchAPI('/movies/services');
+            if (data && data.services) {
+                allServices = data.services;
+                const select = document.getElementById('serviceFilter');
+                select.innerHTML = '<option value="">All Services</option>' +
+                    data.services.map(s => `<option value="${s.name}">${s.name} (${s.movie_count})</option>`).join('');
+
+                updateStats(data.total_movies, data.services.length);
+            }
+        }
+
+        function updateStats(totalMovies, servicesCount) {
+            const myListCount = getMyList().length;
+            document.getElementById('stats').innerHTML = `
+                <div class="stat">
+                    <div class="stat-value">${totalMovies || '...'}</div>
+                    <div class="stat-label">Free Movies</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${servicesCount || '...'}</div>
+                    <div class="stat-label">Streaming Services</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value mylist">${myListCount}</div>
+                    <div class="stat-label">In My List</div>
+                </div>
+            `;
+        }
+
+        function showMyList() {
+            const movies = getMyList();
+            document.getElementById('filtersContainer').style.display = 'none';
+            renderMovies(movies, true);
+        }
+
+        async function showTab(tab, buttonEl) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (buttonEl) {
+                buttonEl.classList.add('active');
+            } else {
+                document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            }
+
+            // Show/hide filters based on tab
+            const filtersContainer = document.getElementById('filtersContainer');
+
+            if (tab === 'mylist') {
+                filtersContainer.style.display = 'none';
+                showMyList();
+                return;
+            } else {
+                filtersContainer.style.display = 'flex';
+            }
+
+            showLoading();
+
+            const service = document.getElementById('serviceFilter').value;
+            const rating = document.getElementById('ratingFilter').value;
+
+            let movies;
+
+            switch(tab) {
+                case 'top':
+                    movies = await fetchAPI(`/movies/top?limit=30&min_rating=${rating}${service ? '&service=' + encodeURIComponent(service) : ''}`);
+                    break;
+                case 'random':
+                    movies = await fetchAPI(`/movies/random?count=12${service ? '&service=' + encodeURIComponent(service) : ''}`);
+                    break;
+                case 'all':
+                    movies = await fetchAPI(`/movies?limit=50${service ? '&service=' + encodeURIComponent(service) : ''}`);
+                    if (movies && rating > 0) {
+                        movies = movies.filter(m => m.rating && m.rating >= rating);
+                    }
+                    break;
+            }
+
+            renderMovies(movies);
+        }
+
+        async function searchMovies() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            showLoading();
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('filtersContainer').style.display = 'none';
+
+            const movies = await fetchAPI(`/movies/search?q=${encodeURIComponent(query)}`);
+            renderMovies(movies);
+        }
+
+        async function applyFilters() {
+            if (currentTab !== 'mylist') {
+                showTab(currentTab);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateMyListBadge();
+            await loadServices();
+            showTab('top');
+        });
+    </script>
+</body>
+</html>
