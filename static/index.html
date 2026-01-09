@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Movies India</title>
+    <title>Watchlazy - Free Movies, Zero Effort</title>
+    <meta name="description" content="Discover and watch free movies on JioHotstar, MX Player, Zee5, Plex and more. No subscriptions needed.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://archive.org">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #FF4757;
+            --secondary: #FFA502;
+            --accent: #FFD93D;
+            --bg-dark: #0F0F1A;
+            --bg-surface: #1A1A2E;
+            --bg-elevated: #252540;
+            --text: #FFFFFF;
+            --text-muted: #8B8B9A;
+            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,86 +29,127 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
             min-height: 100vh;
-            color: #fff;
+            color: var(--text);
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         header {
             text-align: center;
-            padding: 40px 20px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
+            padding: 50px 20px;
+            background: linear-gradient(135deg, rgba(255,71,87,0.1) 0%, rgba(255,165,2,0.1) 100%);
+            border-radius: 24px;
             margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
         }
 
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #e94560, #f39c12);
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover .logo-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .logo-text {
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: var(--gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            letter-spacing: -1px;
         }
 
-        header p {
-            color: #888;
-            font-size: 1.1rem;
+        .logo-text span {
+            font-weight: 400;
+        }
+
+        .tagline {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .tagline strong {
+            color: var(--secondary);
+            font-weight: 600;
         }
 
         .search-box {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             max-width: 600px;
             margin: 30px auto;
         }
 
         .search-box input {
             flex: 1;
-            padding: 15px 20px;
+            padding: 16px 24px;
             font-size: 1rem;
-            border: none;
+            font-family: inherit;
+            border: 2px solid transparent;
             border-radius: 50px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
+            background: var(--bg-surface);
+            color: var(--text);
             outline: none;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
         }
 
         .search-box input::placeholder {
-            color: #888;
+            color: var(--text-muted);
         }
 
         .search-box input:focus {
-            background: rgba(255,255,255,0.15);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 71, 87, 0.2);
         }
 
         .search-box button {
-            padding: 15px 30px;
+            padding: 16px 32px;
             font-size: 1rem;
+            font-family: inherit;
+            font-weight: 600;
             border: none;
             border-radius: 50px;
-            background: linear-gradient(90deg, #e94560, #f39c12);
-            color: #fff;
+            background: var(--gradient);
+            color: var(--text);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
         }
 
         .search-box button:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+            box-shadow: 0 8px 30px rgba(255, 71, 87, 0.4);
         }
 
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             justify-content: center;
             flex-wrap: wrap;
             margin-bottom: 30px;
@@ -99,36 +157,44 @@
 
         .tab {
             padding: 12px 24px;
-            border: 2px solid rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.1);
             border-radius: 50px;
-            background: transparent;
-            color: #fff;
+            background: var(--bg-surface);
+            color: var(--text);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             font-size: 0.95rem;
+            font-family: inherit;
+            font-weight: 500;
         }
 
-        .tab:hover, .tab.active {
-            background: rgba(233, 69, 96, 0.3);
-            border-color: #e94560;
+        .tab:hover {
+            border-color: var(--primary);
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        .tab.active {
+            background: var(--gradient);
+            border-color: transparent;
         }
 
         .tab.mylist-tab {
-            border-color: #f39c12;
+            border-color: var(--secondary);
         }
 
         .tab.mylist-tab:hover, .tab.mylist-tab.active {
-            background: rgba(243, 156, 18, 0.3);
-            border-color: #f39c12;
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+            border-color: transparent;
+            color: var(--bg-dark);
         }
 
         .tab .badge {
             display: inline-block;
-            background: #f39c12;
-            color: #1a1a2e;
+            background: var(--accent);
+            color: var(--bg-dark);
             font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 10px;
+            padding: 3px 10px;
+            border-radius: 12px;
             margin-left: 8px;
             font-weight: 700;
         }
@@ -142,25 +208,31 @@
         }
 
         .filters select {
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 25px;
-            border: 2px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.1);
-            color: #fff;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: var(--bg-surface);
+            color: var(--text);
             font-size: 0.9rem;
+            font-family: inherit;
             cursor: pointer;
             outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .filters select:hover {
+            border-color: var(--primary);
         }
 
         .filters select option {
-            background: #1a1a2e;
-            color: #fff;
+            background: var(--bg-dark);
+            color: var(--text);
         }
 
         .loading {
             text-align: center;
             padding: 50px;
-            color: #888;
+            color: var(--text-muted);
         }
 
         .loading::after {
@@ -168,10 +240,10 @@
             display: inline-block;
             width: 30px;
             height: 30px;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top-color: #e94560;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.8s linear infinite;
             margin-left: 15px;
             vertical-align: middle;
         }
@@ -187,27 +259,35 @@
         }
 
         .movie-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
+            background: var(--bg-surface);
+            border-radius: 20px;
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             position: relative;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .movie-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+            border-color: rgba(255, 71, 87, 0.3);
         }
 
         .movie-card.in-list {
-            border: 2px solid #f39c12;
+            border: 2px solid var(--secondary);
+            box-shadow: 0 0 20px rgba(255, 165, 2, 0.2);
         }
 
         .movie-poster {
             width: 100%;
             height: 200px;
             object-fit: cover;
-            background: linear-gradient(135deg, #2d3436, #636e72);
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            transition: transform 0.4s ease;
+        }
+
+        .movie-card:hover .movie-poster {
+            transform: scale(1.05);
         }
 
         .movie-info {
@@ -226,20 +306,20 @@
         .movie-meta {
             display: flex;
             gap: 15px;
-            color: #888;
+            color: var(--text-muted);
             font-size: 0.85rem;
             margin-bottom: 12px;
         }
 
         .movie-rating {
-            color: #f39c12;
+            color: var(--secondary);
             font-weight: 600;
         }
 
         .movie-synopsis {
             font-size: 0.85rem;
-            color: #aaa;
-            line-height: 1.5;
+            color: var(--text-muted);
+            line-height: 1.6;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
@@ -255,10 +335,11 @@
 
         .service-tag {
             padding: 5px 12px;
-            background: rgba(233, 69, 96, 0.2);
+            background: rgba(255, 71, 87, 0.15);
             border-radius: 20px;
             font-size: 0.75rem;
-            color: #e94560;
+            color: var(--primary);
+            font-weight: 500;
         }
 
         .movie-actions {
@@ -271,50 +352,55 @@
         .watch-btn {
             display: inline-block;
             padding: 10px 20px;
-            background: linear-gradient(90deg, #e94560, #f39c12);
-            color: #fff;
+            background: var(--gradient);
+            color: var(--text);
             text-decoration: none;
             border-radius: 25px;
             font-size: 0.85rem;
-            transition: transform 0.2s;
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.3s ease;
             border: none;
             cursor: pointer;
         }
 
         .watch-btn:hover {
             transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(255, 71, 87, 0.4);
         }
 
         .list-btn {
             padding: 10px 20px;
             border-radius: 25px;
             font-size: 0.85rem;
+            font-family: inherit;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid #f39c12;
+            transition: all 0.3s ease;
+            border: 2px solid var(--secondary);
             background: transparent;
-            color: #f39c12;
+            color: var(--secondary);
         }
 
         .list-btn:hover {
-            background: rgba(243, 156, 18, 0.2);
+            background: rgba(255, 165, 2, 0.2);
         }
 
         .list-btn.in-list {
-            background: #f39c12;
-            color: #1a1a2e;
+            background: var(--secondary);
+            color: var(--bg-dark);
         }
 
         .list-btn.in-list:hover {
-            background: #e74c3c;
-            border-color: #e74c3c;
-            color: #fff;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--text);
         }
 
         .no-results {
             text-align: center;
             padding: 50px;
-            color: #888;
+            color: var(--text-muted);
         }
 
         .no-results-icon {
@@ -332,21 +418,25 @@
 
         .stat {
             text-align: center;
+            padding: 15px 25px;
+            background: var(--bg-surface);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
-            color: #e94560;
+            color: var(--primary);
         }
 
         .stat-value.mylist {
-            color: #f39c12;
+            color: var(--secondary);
         }
 
         .stat-label {
             font-size: 0.85rem;
-            color: #888;
+            color: var(--text-muted);
         }
 
         .toast {
@@ -354,14 +444,15 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: #333;
-            color: #fff;
+            background: var(--bg-elevated);
+            color: var(--text);
             padding: 15px 30px;
             border-radius: 50px;
             font-size: 0.95rem;
+            font-weight: 500;
             z-index: 1000;
             transition: transform 0.3s ease;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
         }
 
         .toast.show {
@@ -373,14 +464,19 @@
         }
 
         .toast.removed {
-            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            background: linear-gradient(90deg, var(--primary), #c0392b);
         }
 
         footer {
             text-align: center;
             padding: 40px;
-            color: #666;
+            color: var(--text-muted);
             font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
         }
 
         .empty-list {
@@ -397,19 +493,812 @@
         .empty-list h3 {
             font-size: 1.5rem;
             margin-bottom: 10px;
-            color: #aaa;
+            color: var(--text-muted);
         }
 
         .empty-list p {
-            color: #666;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Video Modal */
+        .video-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .video-modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 90vw;
+            max-width: 1200px;
+            background: var(--bg-surface);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0 10px;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--primary);
+        }
+
+        .modal-body {
+            position: relative;
+            padding-top: 56.25%; /* 16:9 aspect ratio */
+            background: #000;
+        }
+
+        .modal-body iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .modal-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .modal-loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        .modal-loading.hidden {
+            display: none;
+        }
+
+        /* Detail Modal */
+        .detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 40px 20px;
+        }
+
+        .detail-modal.show {
+            display: flex;
+        }
+
+        .detail-content {
+            width: 100%;
+            max-width: 900px;
+            background: var(--bg-surface);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .detail-header h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .detail-body {
+            padding: 25px;
+        }
+
+        .detail-top {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .detail-poster {
+            width: 200px;
+            min-width: 200px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .detail-poster img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .detail-meta .rating {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .detail-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .detail-genres span {
+            padding: 5px 12px;
+            background: rgba(255, 71, 87, 0.15);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--primary);
+        }
+
+        .detail-director {
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        .detail-director strong {
+            color: var(--text);
+        }
+
+        .detail-synopsis {
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .detail-cast {
+            margin-bottom: 20px;
+        }
+
+        .detail-cast h4 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .detail-cast p {
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .detail-sources {
+            margin-bottom: 25px;
+        }
+
+        .detail-sources h4 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .source-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .source-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--bg-elevated);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 30px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .source-btn:hover {
+            border-color: var(--primary);
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        .source-btn.embed-btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            border-color: transparent;
+        }
+
+        .source-btn.embed-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .related-section {
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 25px;
+        }
+
+        .related-section h4 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .related-movies {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .related-movie {
+            flex-shrink: 0;
+            width: 120px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .related-movie:hover {
+            transform: scale(1.05);
+        }
+
+        .related-movie img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+
+        .related-movie p {
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 600px) {
+            .detail-top {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .detail-poster {
+                width: 150px;
+                min-width: 150px;
+            }
+            .detail-meta, .detail-genres {
+                justify-content: center;
+            }
+        }
+
+        .movie-title {
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .movie-title:hover {
+            color: var(--primary);
+        }
+
+        .watch-btn.watch-here {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        .watch-btn.watch-here:hover {
+            box-shadow: 0 5px 20px rgba(46, 204, 113, 0.4);
+        }
+
+        .embeddable-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(46, 204, 113, 0.9);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .movie-card {
+            position: relative;
+        }
+
+        .poster-container {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Reactions & User Actions */
+        .movie-user-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            flex-wrap: wrap;
+        }
+
+        .reaction-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .reaction-btn {
+            background: var(--bg-elevated);
+            border: 2px solid transparent;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.5;
+        }
+
+        .reaction-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .reaction-btn.active {
+            opacity: 1;
+            border-color: var(--primary);
+            background: rgba(255, 71, 87, 0.2);
+        }
+
+        .watched-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: var(--bg-elevated);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .watched-btn:hover {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        .watched-btn.active {
+            background: rgba(255, 165, 2, 0.2);
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        .delete-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: all 0.2s ease;
+            padding: 5px;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+            color: #e74c3c;
+        }
+
+        .watched-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 165, 2, 0.9);
+            color: var(--bg-dark);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .movie-card.watched .movie-poster {
+            opacity: 0.6;
+        }
+
+        /* Settings Panel */
+        .settings-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-elevated);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .settings-toggle:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .settings-panel {
+            display: none;
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--bg-surface);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            width: 280px;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+        }
+
+        .settings-panel.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .settings-panel h4 {
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-row label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .setting-row select, .setting-row input {
+            background: var(--bg-elevated);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .setting-row input[type="number"] {
+            width: 80px;
+            text-align: center;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .settings-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-muted);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* For You Tab */
+        .tab.foryou-tab {
+            background: linear-gradient(135deg, #9b59b6 0%, #3498db 100%);
+            border-color: transparent;
+            color: white;
+        }
+
+        .tab.foryou-tab:hover, .tab.foryou-tab.active {
+            background: linear-gradient(135deg, #8e44ad 0%, #2980b9 100%);
+            box-shadow: 0 5px 20px rgba(155, 89, 182, 0.4);
+        }
+
+        /* Recommendations UI */
+        .recommendations-header {
+            text-align: center;
+            padding: 30px 20px;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, rgba(155,89,182,0.15) 0%, rgba(52,152,219,0.15) 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .recommendations-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #9b59b6, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .recommendations-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .preference-summary {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pref-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-surface);
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .pref-item .count {
+            background: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .no-preferences {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .no-preferences-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+
+        .no-preferences h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .no-preferences p {
+            color: var(--text-muted);
+            max-width: 400px;
+            margin: 0 auto 25px;
+            line-height: 1.6;
+        }
+
+        .no-preferences .start-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .no-preferences .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(255, 71, 87, 0.4);
+        }
+
+        .rec-section {
+            margin-bottom: 35px;
+        }
+
+        .rec-section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .rec-section-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .rec-section-header .reason {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .rec-movies-row {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .rec-movie-card {
+            flex-shrink: 0;
+            width: 160px;
+            background: var(--bg-surface);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .rec-movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-color: rgba(155, 89, 182, 0.3);
+        }
+
+        .rec-movie-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .rec-movie-card .info {
+            padding: 12px;
+        }
+
+        .rec-movie-card .title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+        }
+
+        .rec-movie-card .meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .rec-movie-card .match {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 3px 8px;
+            background: rgba(155, 89, 182, 0.2);
+            color: #9b59b6;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Free Movies India</h1>
-            <p>Discover free movies to watch on JioHotstar, MX Player, Zee5, Plex & more</p>
+            <div class="logo">
+                <!-- Lazy Eye Logo SVG -->
+                <svg class="logo-icon" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FF4757"/>
+                            <stop offset="100%" style="stop-color:#FFA502"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Lazy half-closed eye shape -->
+                    <ellipse cx="30" cy="30" rx="28" ry="18" stroke="url(#logoGradient)" stroke-width="3" fill="none"/>
+                    <!-- Droopy eyelid (lazy look) -->
+                    <path d="M2 30 Q30 5 58 30" stroke="url(#logoGradient)" stroke-width="3" fill="rgba(15,15,26,0.9)"/>
+                    <!-- Play button as pupil -->
+                    <path d="M24 22 L24 38 L40 30 Z" fill="url(#logoGradient)"/>
+                </svg>
+                <h1 class="logo-text">Watch<span>lazy</span></h1>
+            </div>
+            <p class="tagline">Free movies. <strong>Zero effort.</strong></p>
         </header>
 
         <div class="search-box">
@@ -418,6 +1307,7 @@
         </div>
 
         <div class="tabs">
+            <button class="tab foryou-tab" data-tab="foryou" onclick="showTab('foryou', this)">For You ✨</button>
             <button class="tab active" data-tab="top" onclick="showTab('top', this)">Top Rated</button>
             <button class="tab" data-tab="random" onclick="showTab('random', this)">Random Picks</button>
             <button class="tab" data-tab="all" onclick="showTab('all', this)">Browse All</button>
@@ -425,6 +1315,9 @@
         </div>
 
         <div class="filters" id="filtersContainer">
+            <select id="genreFilter" onchange="applyFilters()">
+                <option value="">All Genres</option>
+            </select>
             <select id="serviceFilter" onchange="applyFilters()">
                 <option value="">All Services</option>
             </select>
@@ -433,6 +1326,14 @@
                 <option value="6">IMDb 6+</option>
                 <option value="7">IMDb 7+</option>
                 <option value="8">IMDb 8+</option>
+            </select>
+            <select id="sortFilter" onchange="applyFilters()">
+                <option value="rating_desc">Rating: High to Low</option>
+                <option value="rating_asc">Rating: Low to High</option>
+                <option value="year_desc">Year: Newest First</option>
+                <option value="year_asc">Year: Oldest First</option>
+                <option value="title_asc">Title: A-Z</option>
+                <option value="title_desc">Title: Z-A</option>
             </select>
         </div>
 
@@ -443,17 +1344,549 @@
         </div>
 
         <footer>
-            Powered by JustWatch & Internet Archive | Free Movies India API
+            <strong>Watchlazy</strong> &mdash; Powered by JustWatch & Internet Archive
         </footer>
     </div>
 
     <div class="toast" id="toast"></div>
 
+    <!-- Video Player Modal -->
+    <div class="video-modal" id="videoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle"></span>
+                <button class="modal-close" onclick="closePlayer()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-loading" id="videoLoading">
+                    <div class="spinner"></div>
+                    <p>Loading video...</p>
+                </div>
+                <iframe id="videoFrame" allowfullscreen onload="hideVideoLoading()"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movie Detail Modal -->
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-content">
+            <div class="detail-header">
+                <h2>Movie Details</h2>
+                <button class="modal-close" onclick="closeDetailView()">&times;</button>
+            </div>
+            <div class="detail-body" id="detailBody">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <button class="settings-toggle" onclick="toggleSettings()" title="Settings">&#9881;</button>
+    <div class="settings-panel" id="settingsPanel">
+        <h4>Settings</h4>
+        <div class="setting-row">
+            <label>Cache Duration</label>
+            <select id="cacheDuration" onchange="updateCacheDuration()">
+                <option value="5">5 minutes</option>
+                <option value="15">15 minutes</option>
+                <option value="30" selected>30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="360">6 hours</option>
+            </select>
+        </div>
+        <div class="settings-actions">
+            <button class="btn-secondary" onclick="clearApiCache(); toggleSettings()">Clear Cache</button>
+            <button class="btn-danger" onclick="clearHiddenMovies()">Unhide All</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '';
         const STORAGE_KEY = 'myMovieList';
+        const REACTIONS_KEY = 'movieReactions';
+        const WATCHED_KEY = 'watchedMovies';
+        const HIDDEN_KEY = 'hiddenMovies';
+        const SETTINGS_KEY = 'watchlazySettings';
+
         let currentTab = 'top';
         let allServices = [];
+
+        // --- Settings ---
+        function getSettings() {
+            try {
+                const data = localStorage.getItem(SETTINGS_KEY);
+                return data ? JSON.parse(data) : { cacheDuration: 30 };
+            } catch (e) {
+                return { cacheDuration: 30 };
+            }
+        }
+
+        function saveSettings(settings) {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('show');
+        }
+
+        function updateCacheDuration() {
+            const duration = parseInt(document.getElementById('cacheDuration').value);
+            const settings = getSettings();
+            settings.cacheDuration = duration;
+            saveSettings(settings);
+            showToast(`Cache duration set to ${duration} minutes`, 'success');
+        }
+
+        function loadSettings() {
+            const settings = getSettings();
+            document.getElementById('cacheDuration').value = settings.cacheDuration;
+        }
+
+        // --- Reactions (loved, liked, meh, disliked) ---
+        const REACTIONS = {
+            'loved': '😍',
+            'liked': '👍',
+            'meh': '😐',
+            'disliked': '👎'
+        };
+
+        function getMovieKey(movie) {
+            return `${movie.title}_${movie.year || 'unknown'}`;
+        }
+
+        function getReactions() {
+            try {
+                const data = localStorage.getItem(REACTIONS_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function setReaction(movieId, reaction) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const key = getMovieKey(movie);
+            const reactions = getReactions();
+
+            if (reactions[key] === reaction) {
+                delete reactions[key]; // Toggle off
+                showToast('Reaction removed', '');
+            } else {
+                reactions[key] = reaction;
+                showToast(`Marked as ${reaction}`, 'success');
+            }
+
+            localStorage.setItem(REACTIONS_KEY, JSON.stringify(reactions));
+            updateReactionButtons(movieId);
+        }
+
+        function getMovieReaction(movie) {
+            const reactions = getReactions();
+            return reactions[getMovieKey(movie)] || null;
+        }
+
+        function updateReactionButtons(movieId) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const reaction = getMovieReaction(movie);
+            document.querySelectorAll(`[data-reaction-movie="${movieId}"]`).forEach(btn => {
+                const btnReaction = btn.dataset.reaction;
+                btn.classList.toggle('active', btnReaction === reaction);
+            });
+        }
+
+        // --- Watched Status ---
+        function getWatchedMovies() {
+            try {
+                const data = localStorage.getItem(WATCHED_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function toggleWatched(movieId) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const key = getMovieKey(movie);
+            const watched = getWatchedMovies();
+
+            if (watched[key]) {
+                delete watched[key];
+                showToast('Marked as unwatched', '');
+            } else {
+                watched[key] = Date.now();
+                showToast('Marked as watched', 'success');
+            }
+
+            localStorage.setItem(WATCHED_KEY, JSON.stringify(watched));
+
+            // Update UI
+            const card = document.querySelector(`[data-card-movie="${movieId}"]`);
+            const btn = document.querySelector(`[data-watched-movie="${movieId}"]`);
+            if (card) card.classList.toggle('watched', !!watched[key]);
+            if (btn) btn.classList.toggle('active', !!watched[key]);
+        }
+
+        function isWatched(movie) {
+            const watched = getWatchedMovies();
+            return !!watched[getMovieKey(movie)];
+        }
+
+        // --- Hidden/Deleted Movies (permanent, never expires) ---
+        function getHiddenMovies() {
+            try {
+                const data = localStorage.getItem(HIDDEN_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function hideMovie(movieId) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const key = getMovieKey(movie);
+            const hidden = getHiddenMovies();
+            hidden[key] = { title: movie.title, hiddenAt: Date.now() };
+            localStorage.setItem(HIDDEN_KEY, JSON.stringify(hidden));
+
+            // Remove from DOM with animation
+            const card = document.querySelector(`[data-card-movie="${movieId}"]`);
+            if (card) {
+                card.style.transform = 'scale(0.8)';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 200);
+            }
+
+            showToast(`"${movie.title}" hidden`, 'removed');
+        }
+
+        function isHidden(movie) {
+            const hidden = getHiddenMovies();
+            return !!hidden[getMovieKey(movie)];
+        }
+
+        function clearHiddenMovies() {
+            const hidden = getHiddenMovies();
+            const count = Object.keys(hidden).length;
+            localStorage.removeItem(HIDDEN_KEY);
+            showToast(`${count} movies unhidden`, 'success');
+            toggleSettings();
+            // Refresh current view
+            if (currentTab !== 'mylist') {
+                showTab(currentTab);
+            }
+        }
+
+        // --- Recommendation Engine ---
+        function getUserPreferences() {
+            const reactions = getReactions();
+            const watched = getWatchedMovies();
+            const hidden = getHiddenMovies();
+
+            // Get movies user loved/liked
+            const lovedMovies = [];
+            const likedMovies = [];
+            const dislikedMovies = [];
+
+            Object.entries(reactions).forEach(([key, reaction]) => {
+                if (reaction === 'loved') lovedMovies.push(key);
+                else if (reaction === 'liked') likedMovies.push(key);
+                else if (reaction === 'disliked') dislikedMovies.push(key);
+            });
+
+            return {
+                loved: lovedMovies,
+                liked: likedMovies,
+                disliked: dislikedMovies,
+                watched: Object.keys(watched),
+                hidden: Object.keys(hidden),
+                hasPreferences: lovedMovies.length > 0 || likedMovies.length > 0 || Object.keys(watched).length > 0
+            };
+        }
+
+        function extractPreferredAttributes(movies, movieKeys) {
+            const genres = {};
+            const directors = {};
+            const cast = {};
+
+            movies.forEach(movie => {
+                const key = getMovieKey(movie);
+                if (!movieKeys.includes(key)) return;
+
+                // Count genres
+                (movie.genres || []).forEach(g => {
+                    genres[g] = (genres[g] || 0) + 1;
+                });
+
+                // Count directors
+                if (movie.director) {
+                    directors[movie.director] = (directors[movie.director] || 0) + 1;
+                }
+
+                // Count cast
+                (movie.cast || []).forEach(actor => {
+                    cast[actor] = (cast[actor] || 0) + 1;
+                });
+            });
+
+            return { genres, directors, cast };
+        }
+
+        function getRecommendations(allMovies) {
+            const prefs = getUserPreferences();
+
+            if (!prefs.hasPreferences) {
+                return { recommendations: [], prefs, preferredGenres: [], preferredDirectors: [] };
+            }
+
+            // Combine loved (weight 3) and liked (weight 1) for preference extraction
+            const positiveKeys = [...prefs.loved, ...prefs.loved, ...prefs.loved, ...prefs.liked];
+
+            // Also consider watched movies as mild positive signal
+            const watchedForPrefs = prefs.watched.slice(0, 10); // Limit to recent 10
+
+            const allPositiveKeys = [...positiveKeys, ...watchedForPrefs];
+            const positiveAttrs = extractPreferredAttributes(allMovies, allPositiveKeys);
+
+            // Extract negative attributes from disliked/hidden
+            const negativeKeys = [...prefs.disliked, ...prefs.hidden];
+            const negativeAttrs = extractPreferredAttributes(allMovies, negativeKeys);
+
+            // Sort genres by frequency
+            const topGenres = Object.entries(positiveAttrs.genres)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([g]) => g);
+
+            const topDirectors = Object.entries(positiveAttrs.directors)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([d]) => d);
+
+            const topCast = Object.entries(positiveAttrs.cast)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([c]) => c);
+
+            // Disliked genres to avoid
+            const avoidGenres = Object.entries(negativeAttrs.genres)
+                .filter(([g, count]) => count >= 2)
+                .map(([g]) => g);
+
+            // Score all movies
+            const excludeKeys = new Set([...prefs.loved, ...prefs.liked, ...prefs.watched, ...prefs.hidden, ...prefs.disliked]);
+
+            const scored = allMovies
+                .filter(m => !excludeKeys.has(getMovieKey(m)))
+                .filter(m => !isHidden(m))
+                .map(movie => {
+                    let score = 0;
+                    let reasons = [];
+
+                    // Genre matching (+2 per top genre)
+                    const movieGenres = movie.genres || [];
+                    const matchedGenres = movieGenres.filter(g => topGenres.includes(g));
+                    if (matchedGenres.length > 0) {
+                        score += matchedGenres.length * 2;
+                        reasons.push(`${matchedGenres.map(g => getGenreName(g)).join(', ')}`);
+                    }
+
+                    // Penalty for disliked genres
+                    const avoidedGenres = movieGenres.filter(g => avoidGenres.includes(g));
+                    score -= avoidedGenres.length * 3;
+
+                    // Director match (+5)
+                    if (movie.director && topDirectors.includes(movie.director)) {
+                        score += 5;
+                        reasons.push(`Director: ${movie.director}`);
+                    }
+
+                    // Cast match (+3 per actor)
+                    const matchedCast = (movie.cast || []).filter(a => topCast.includes(a));
+                    if (matchedCast.length > 0) {
+                        score += matchedCast.length * 3;
+                        reasons.push(`Stars: ${matchedCast.slice(0, 2).join(', ')}`);
+                    }
+
+                    // Rating bonus
+                    if (movie.rating && movie.rating >= 7) {
+                        score += 1;
+                    }
+
+                    return { movie, score, reasons };
+                })
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score);
+
+            return {
+                recommendations: scored.slice(0, 30),
+                prefs,
+                preferredGenres: topGenres.map(g => getGenreName(g)),
+                preferredDirectors: topDirectors,
+                preferredCast: topCast
+            };
+        }
+
+        async function showRecommendations() {
+            showLoading();
+
+            // Fetch all movies first
+            const movies = await fetchAPI('/movies?limit=500');
+            if (!movies || movies.length === 0) {
+                showNoResults('No movies available');
+                return;
+            }
+
+            const { recommendations, prefs, preferredGenres, preferredDirectors } = getRecommendations(movies);
+
+            // If no preferences, show onboarding
+            if (!prefs.hasPreferences) {
+                document.getElementById('moviesContainer').innerHTML = `
+                    <div class="no-preferences">
+                        <div class="no-preferences-icon">✨</div>
+                        <h3>Get Personalized Recommendations</h3>
+                        <p>Start by browsing movies and telling us what you think! Use the reaction buttons (😍 👍 😐 👎) and mark movies as watched to get tailored recommendations.</p>
+                        <button class="start-btn" onclick="showTab('top')">Browse Top Rated</button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Build preference summary
+            const prefSummary = [];
+            if (prefs.loved.length) prefSummary.push(`<div class="pref-item">😍 Loved <span class="count">${prefs.loved.length}</span></div>`);
+            if (prefs.liked.length) prefSummary.push(`<div class="pref-item">👍 Liked <span class="count">${prefs.liked.length}</span></div>`);
+            if (prefs.watched.length) prefSummary.push(`<div class="pref-item">👁 Watched <span class="count">${prefs.watched.length}</span></div>`);
+            if (prefs.hidden.length) prefSummary.push(`<div class="pref-item">🚫 Hidden <span class="count">${prefs.hidden.length}</span></div>`);
+
+            // Group recommendations by reason
+            const byGenre = {};
+            const byDirector = {};
+            const topPicks = [];
+
+            recommendations.forEach(({ movie, score, reasons }) => {
+                const movieId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                window.movieDataStore = window.movieDataStore || {};
+                window.movieDataStore[movieId] = movie;
+
+                const cardHtml = `
+                    <div class="rec-movie-card" onclick="openDetailView('${movieId}')">
+                        <img src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 160 200%22><rect fill=%22%232d3436%22/></svg>'">
+                        <div class="info">
+                            <div class="title" title="${movie.title}">${movie.title}</div>
+                            <div class="meta">${movie.year || ''} ${movie.rating ? `• ★${movie.rating}` : ''}</div>
+                            <div class="match">${reasons[0] || 'Recommended'}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (score >= 6) {
+                    topPicks.push(cardHtml);
+                }
+
+                // Categorize by main reason
+                const mainReason = reasons[0] || '';
+                if (mainReason.includes('Director:')) {
+                    const dir = mainReason.replace('Director: ', '');
+                    byDirector[dir] = byDirector[dir] || [];
+                    byDirector[dir].push(cardHtml);
+                } else if (mainReason) {
+                    byGenre[mainReason] = byGenre[mainReason] || [];
+                    byGenre[mainReason].push(cardHtml);
+                }
+            });
+
+            // Build sections HTML
+            let sectionsHtml = '';
+
+            // Top Picks section
+            if (topPicks.length > 0) {
+                sectionsHtml += `
+                    <div class="rec-section">
+                        <div class="rec-section-header">
+                            <h3>🎯 Top Picks For You</h3>
+                            <span class="reason">Best matches based on your taste</span>
+                        </div>
+                        <div class="rec-movies-row">${topPicks.slice(0, 10).join('')}</div>
+                    </div>
+                `;
+            }
+
+            // By Director sections
+            Object.entries(byDirector).slice(0, 2).forEach(([director, cards]) => {
+                if (cards.length >= 2) {
+                    sectionsHtml += `
+                        <div class="rec-section">
+                            <div class="rec-section-header">
+                                <h3>🎬 More from ${director}</h3>
+                                <span class="reason">Because you liked their work</span>
+                            </div>
+                            <div class="rec-movies-row">${cards.slice(0, 8).join('')}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            // By Genre sections
+            Object.entries(byGenre).slice(0, 3).forEach(([genre, cards]) => {
+                if (cards.length >= 3) {
+                    sectionsHtml += `
+                        <div class="rec-section">
+                            <div class="rec-section-header">
+                                <h3>🎭 ${genre}</h3>
+                                <span class="reason">Because you enjoy this genre</span>
+                            </div>
+                            <div class="rec-movies-row">${cards.slice(0, 8).join('')}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            // If we have recommendations but no sections, show all as a grid
+            if (!sectionsHtml && recommendations.length > 0) {
+                const allCards = recommendations.slice(0, 20).map(({ movie, reasons }) => {
+                    const movieId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    window.movieDataStore[movieId] = movie;
+                    return `
+                        <div class="rec-movie-card" onclick="openDetailView('${movieId}')">
+                            <img src="${getPosterUrl(movie)}" alt="${movie.title}">
+                            <div class="info">
+                                <div class="title">${movie.title}</div>
+                                <div class="meta">${movie.year || ''}</div>
+                                <div class="match">${reasons[0] || 'Recommended'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                sectionsHtml = `
+                    <div class="rec-section">
+                        <div class="rec-section-header">
+                            <h3>🎯 Recommended For You</h3>
+                        </div>
+                        <div class="rec-movies-row">${allCards}</div>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="recommendations-header">
+                    <h2>Personalized For You</h2>
+                    <p>Based on your ratings, watched history, and preferences</p>
+                    <div class="preference-summary">${prefSummary.join('')}</div>
+                </div>
+                ${sectionsHtml || '<div class="no-results">Keep rating movies to improve your recommendations!</div>'}
+            `;
+
+            document.getElementById('moviesContainer').innerHTML = html;
+        }
 
         // --- Local Storage Functions ---
         function getMyList() {
@@ -550,7 +1983,11 @@
 
         // --- API Cache (localStorage) ---
         const API_CACHE_KEY = 'apiCache';
-        const API_CACHE_TTL = 30 * 60 * 1000; // 30 minutes in ms
+
+        function getApiCacheTTL() {
+            const settings = getSettings();
+            return settings.cacheDuration * 60 * 1000; // Convert minutes to ms
+        }
 
         function getApiCache() {
             try {
@@ -577,7 +2014,7 @@
         function getCachedResponse(endpoint) {
             const cache = getApiCache();
             const entry = cache[endpoint];
-            if (entry && (Date.now() - entry.timestamp) < API_CACHE_TTL) {
+            if (entry && (Date.now() - entry.timestamp) < getApiCacheTTL()) {
                 console.log('Cache hit:', endpoint);
                 return entry.data;
             }
@@ -588,6 +2025,223 @@
             localStorage.removeItem(API_CACHE_KEY);
             showToast('Cache cleared', 'success');
         }
+
+        // --- Embedded Player Functions ---
+        function isEmbeddable(movie) {
+            if (!movie.source_urls || movie.source_urls.length === 0) return false;
+            return movie.source_urls.some(url => url.includes('archive.org'));
+        }
+
+        function getArchiveId(url) {
+            // Extract identifier from URLs like:
+            // https://archive.org/details/identifier
+            // https://archive.org/embed/identifier
+            const match = url.match(/archive\.org\/(?:details|embed)\/([^\/\?]+)/);
+            return match ? match[1] : null;
+        }
+
+        function getEmbedUrl(movie) {
+            const archiveUrl = movie.source_urls.find(url => url.includes('archive.org'));
+            if (!archiveUrl) return null;
+            const id = getArchiveId(archiveUrl);
+            if (!id) return null;
+            return `https://archive.org/embed/${id}`;
+        }
+
+        function openPlayer(movieId) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const embedUrl = getEmbedUrl(movie);
+            if (!embedUrl) return;
+
+            // Show loading spinner
+            document.getElementById('videoLoading').classList.remove('hidden');
+            document.getElementById('modalTitle').textContent = movie.title;
+            document.getElementById('videoFrame').src = embedUrl;
+            document.getElementById('videoModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideVideoLoading() {
+            document.getElementById('videoLoading').classList.add('hidden');
+        }
+
+        function closePlayer() {
+            const modal = document.getElementById('videoModal');
+            const iframe = document.getElementById('videoFrame');
+            modal.classList.remove('show');
+            iframe.src = ''; // Stop video
+            document.body.style.overflow = '';
+            // Reset loading state
+            document.getElementById('videoLoading').classList.remove('hidden');
+        }
+
+        // --- Genre Mapping ---
+        const GENRE_MAP = {
+            'drm': 'Drama', 'rma': 'Romance', 'act': 'Action', 'cmy': 'Comedy',
+            'hrr': 'Horror', 'trl': 'Thriller', 'scf': 'Sci-Fi', 'fnt': 'Fantasy',
+            'doc': 'Documentary', 'ani': 'Animation', 'crm': 'Crime', 'msc': 'Music',
+            'fml': 'Family', 'war': 'War', 'hst': 'History', 'wst': 'Western',
+            'spt': 'Sport', 'mys': 'Mystery', 'adv': 'Adventure', 'rly': 'Reality'
+        };
+
+        function getGenreName(code) {
+            return GENRE_MAP[code] || code;
+        }
+
+        // --- Detail View Functions ---
+        let cachedMovies = []; // Store for related movies lookup
+
+        function getRelatedMovies(movie, limit = 6) {
+            if (!cachedMovies.length) return [];
+
+            const scored = cachedMovies
+                .filter(m => m.title !== movie.title) // Exclude current movie
+                .map(m => {
+                    let score = 0;
+                    // Genre matching (1 point per match)
+                    const sharedGenres = (movie.genres || []).filter(g =>
+                        (m.genres || []).includes(g)
+                    );
+                    score += sharedGenres.length;
+
+                    // Director match (3 points)
+                    if (movie.director && m.director && movie.director === m.director) {
+                        score += 3;
+                    }
+
+                    // Cast overlap (2 points per shared actor)
+                    const sharedCast = (movie.cast || []).filter(a =>
+                        (m.cast || []).includes(a)
+                    );
+                    score += sharedCast.length * 2;
+
+                    return { movie: m, score };
+                })
+                .filter(item => item.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit)
+                .map(item => item.movie);
+
+            return scored;
+        }
+
+        function getServiceName(url) {
+            if (url.includes('archive.org')) return 'Internet Archive';
+            if (url.includes('hotstar.com')) return 'JioHotstar';
+            if (url.includes('plex.tv')) return 'Plex';
+            if (url.includes('zee5.com')) return 'Zee5';
+            if (url.includes('mxplayer.in')) return 'MX Player';
+            if (url.includes('justwatch.com')) return 'JustWatch';
+            return 'Watch';
+        }
+
+        function openDetailView(movieId) {
+            const movie = window.movieDataStore[movieId];
+            if (!movie) return;
+
+            const related = getRelatedMovies(movie);
+            const genres = (movie.genres || []).map(g => getGenreName(g));
+
+            // Build source buttons
+            let sourceButtons = '';
+            if (movie.source_urls && movie.source_urls.length > 0) {
+                movie.source_urls.forEach((url, i) => {
+                    const serviceName = movie.streaming_services[i] || getServiceName(url);
+                    const isArchive = url.includes('archive.org');
+                    if (isArchive) {
+                        sourceButtons += `<button class="source-btn embed-btn" onclick="closeDetailView(); openPlayer('${movieId}')">▶ ${serviceName}</button>`;
+                    } else {
+                        sourceButtons += `<a href="${url}" target="_blank" class="source-btn">${serviceName} →</a>`;
+                    }
+                });
+            }
+
+            // Build related movies
+            let relatedHtml = '';
+            if (related.length > 0) {
+                const relatedItems = related.map(m => {
+                    const relatedId = `related_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    window.movieDataStore[relatedId] = m;
+                    return `
+                        <div class="related-movie" onclick="openDetailView('${relatedId}')">
+                            <img src="${getPosterUrl(m)}" alt="${m.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 160%22><rect fill=%22%232d3436%22/></svg>'">
+                            <p>${m.title}</p>
+                        </div>
+                    `;
+                }).join('');
+
+                relatedHtml = `
+                    <div class="related-section">
+                        <h4>Related Movies</h4>
+                        <div class="related-movies">${relatedItems}</div>
+                    </div>
+                `;
+            }
+
+            const html = `
+                <div class="detail-top">
+                    <div class="detail-poster">
+                        <img src="${getPosterUrl(movie)}" alt="${movie.title}">
+                    </div>
+                    <div class="detail-info">
+                        <h1 class="detail-title">${movie.title}</h1>
+                        <div class="detail-meta">
+                            ${movie.year ? `<span>${movie.year}</span>` : ''}
+                            ${movie.rating ? `<span class="rating">★ ${movie.rating} IMDb</span>` : ''}
+                            ${movie.runtime_minutes ? `<span>${movie.runtime_minutes} min</span>` : ''}
+                        </div>
+                        ${genres.length ? `<div class="detail-genres">${genres.map(g => `<span>${g}</span>`).join('')}</div>` : ''}
+                        ${movie.director ? `<p class="detail-director">Directed by <strong>${movie.director}</strong></p>` : ''}
+                    </div>
+                </div>
+
+                ${movie.synopsis ? `<p class="detail-synopsis">${movie.synopsis}</p>` : ''}
+
+                ${movie.cast && movie.cast.length ? `
+                    <div class="detail-cast">
+                        <h4>Cast</h4>
+                        <p>${movie.cast.join(', ')}</p>
+                    </div>
+                ` : ''}
+
+                ${sourceButtons ? `
+                    <div class="detail-sources">
+                        <h4>Watch On</h4>
+                        <div class="source-buttons">${sourceButtons}</div>
+                    </div>
+                ` : ''}
+
+                ${relatedHtml}
+            `;
+
+            document.getElementById('detailBody').innerHTML = html;
+            document.getElementById('detailModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDetailView() {
+            document.getElementById('detailModal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // Close modals on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePlayer();
+                closeDetailView();
+            }
+        });
+
+        // Close modals on backdrop click
+        document.getElementById('videoModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'videoModal') closePlayer();
+        });
+
+        document.getElementById('detailModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') closeDetailView();
+        });
 
         // --- API Functions ---
         async function fetchAPI(endpoint, skipCache = false) {
@@ -634,6 +2288,11 @@
         }
 
         function renderMovies(movies, isMyListView = false) {
+            // Filter out hidden movies (unless in My List view)
+            if (!isMyListView) {
+                movies = movies.filter(m => !isHidden(m));
+            }
+
             if (!movies || movies.length === 0) {
                 if (isMyListView) {
                     document.getElementById('moviesContainer').innerHTML = `
@@ -649,19 +2308,48 @@
                 return;
             }
 
+            // Store movies for related movies lookup
+            cachedMovies = movies;
+
             const html = movies.map((movie, index) => {
                 const inList = isInMyList(movie);
                 const movieId = `movie_${index}_${Date.now()}`;
+                const canEmbed = isEmbeddable(movie);
+                const watched = isWatched(movie);
+                const reaction = getMovieReaction(movie);
 
                 // Store movie data globally for access by click handler
                 window.movieDataStore = window.movieDataStore || {};
                 window.movieDataStore[movieId] = movie;
 
+                // Generate watch button based on source
+                let watchButton = '';
+                if (movie.source_urls && movie.source_urls.length > 0) {
+                    if (canEmbed) {
+                        watchButton = `<button class="watch-btn watch-here" onclick="openPlayer('${movieId}')">▶ Watch Here</button>`;
+                    } else {
+                        watchButton = `<a href="${movie.source_urls[0]}" target="_blank" class="watch-btn">Watch Now →</a>`;
+                    }
+                }
+
+                // Reaction buttons
+                const reactionBtns = Object.entries(REACTIONS).map(([key, emoji]) =>
+                    `<button class="reaction-btn ${reaction === key ? 'active' : ''}"
+                            data-reaction-movie="${movieId}"
+                            data-reaction="${key}"
+                            onclick="setReaction('${movieId}', '${key}')"
+                            title="${key}">${emoji}</button>`
+                ).join('');
+
                 return `
-                <div class="movie-card ${inList ? 'in-list' : ''}">
-                    <img class="movie-poster" src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 200%22><rect fill=%22%232d3436%22/></svg>'">
+                <div class="movie-card ${inList ? 'in-list' : ''} ${watched ? 'watched' : ''}" data-card-movie="${movieId}">
+                    <div class="poster-container">
+                        <img class="movie-poster" src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 200%22><rect fill=%22%232d3436%22/></svg>'">
+                        ${canEmbed ? '<span class="embeddable-badge">Watch on Site</span>' : ''}
+                        ${watched ? '<span class="watched-badge">Watched</span>' : ''}
+                    </div>
                     <div class="movie-info">
-                        <div class="movie-title" title="${movie.title}">${movie.title}</div>
+                        <div class="movie-title" title="${movie.title}" onclick="openDetailView('${movieId}')">${movie.title}</div>
                         <div class="movie-meta">
                             ${movie.year ? `<span>${movie.year}</span>` : ''}
                             ${movie.rating ? `<span class="movie-rating">IMDb ${movie.rating}</span>` : ''}
@@ -672,11 +2360,17 @@
                             ${movie.streaming_services.map(s => `<span class="service-tag">${s}</span>`).join('')}
                         </div>
                         <div class="movie-actions">
-                            ${movie.source_urls && movie.source_urls.length > 0 ?
-                                `<a href="${movie.source_urls[0]}" target="_blank" class="watch-btn">Watch Now</a>` : ''}
+                            ${watchButton}
                             <button class="list-btn ${inList ? 'in-list' : ''}" data-movie-id="${movieId}" onclick="handleListClick(this)">
                                 ${inList ? '✓ In My List' : '+ Add to List'}
                             </button>
+                        </div>
+                        <div class="movie-user-actions">
+                            <div class="reaction-btns">${reactionBtns}</div>
+                            <button class="watched-btn ${watched ? 'active' : ''}" data-watched-movie="${movieId}" onclick="toggleWatched('${movieId}')">
+                                ${watched ? '✓ Watched' : '👁 Mark Watched'}
+                            </button>
+                            <button class="delete-btn" onclick="hideMovie('${movieId}')" title="Hide this movie">✕</button>
                         </div>
                     </div>
                 </div>
@@ -689,11 +2383,76 @@
             const data = await fetchAPI('/movies/services');
             if (data && data.services) {
                 allServices = data.services;
-                const select = document.getElementById('serviceFilter');
-                select.innerHTML = '<option value="">All Services</option>' +
-                    data.services.map(s => `<option value="${s.name}">${s.name} (${s.movie_count})</option>`).join('');
-
+                updateServiceFilter(null); // Load all services initially
                 updateStats(data.total_movies, data.services.length);
+            }
+        }
+
+        function updateServiceFilter(movies) {
+            const select = document.getElementById('serviceFilter');
+            const currentValue = select.value;
+
+            let services;
+
+            if (movies && movies.length > 0) {
+                // Count services from current movie list
+                const serviceCounts = {};
+                movies.forEach(movie => {
+                    (movie.streaming_services || []).forEach(s => {
+                        serviceCounts[s] = (serviceCounts[s] || 0) + 1;
+                    });
+                });
+
+                // Sort by count
+                services = Object.entries(serviceCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, count]) => ({ name, movie_count: count }));
+            } else {
+                // Use all services
+                services = allServices;
+            }
+
+            select.innerHTML = '<option value="">All Services</option>' +
+                services.map(s => `<option value="${s.name}">${s.name} (${s.movie_count})</option>`).join('');
+
+            // Restore selection if it still exists
+            if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        function updateGenreFilter(movies) {
+            const select = document.getElementById('genreFilter');
+            const currentValue = select.value;
+
+            if (!movies || movies.length === 0) {
+                select.innerHTML = '<option value="">All Genres</option>';
+                return;
+            }
+
+            // Count genres from current movie list
+            const genreCounts = {};
+            movies.forEach(movie => {
+                (movie.genres || []).forEach(g => {
+                    genreCounts[g] = (genreCounts[g] || 0) + 1;
+                });
+            });
+
+            // Sort by count and map to full names
+            const genres = Object.entries(genreCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([code, count]) => ({
+                    code,
+                    name: getGenreName(code),
+                    count
+                }));
+
+            select.innerHTML = '<option value="">All Genres</option>' +
+                genres.map(g => `<option value="${g.code}">${g.name} (${g.count})</option>`).join('');
+
+            // Restore selection if it still exists
+            if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+                select.value = currentValue;
             }
         }
 
@@ -737,6 +2496,10 @@
                 filtersContainer.style.display = 'none';
                 showMyList();
                 return;
+            } else if (tab === 'foryou') {
+                filtersContainer.style.display = 'none';
+                showRecommendations();
+                return;
             } else {
                 filtersContainer.style.display = 'flex';
             }
@@ -744,26 +2507,84 @@
             showLoading();
 
             const service = document.getElementById('serviceFilter').value;
+            const genre = document.getElementById('genreFilter').value;
             const rating = document.getElementById('ratingFilter').value;
+            const sort = document.getElementById('sortFilter').value;
 
             let movies;
 
+            // Fetch more movies for filter dropdowns (without filters applied)
+            let allMoviesForFilter;
+
             switch(tab) {
                 case 'top':
-                    movies = await fetchAPI(`/movies/top?limit=30&min_rating=${rating}${service ? '&service=' + encodeURIComponent(service) : ''}`);
+                    allMoviesForFilter = await fetchAPI(`/movies/top?limit=100&min_rating=${rating}`);
+                    movies = allMoviesForFilter;
                     break;
                 case 'random':
-                    movies = await fetchAPI(`/movies/random?count=12${service ? '&service=' + encodeURIComponent(service) : ''}`);
+                    allMoviesForFilter = await fetchAPI(`/movies/random?count=30`);
+                    movies = allMoviesForFilter;
                     break;
                 case 'all':
-                    movies = await fetchAPI(`/movies?limit=50${service ? '&service=' + encodeURIComponent(service) : ''}`);
-                    if (movies && rating > 0) {
+                    allMoviesForFilter = await fetchAPI(`/movies?limit=200`);
+                    movies = allMoviesForFilter;
+                    if (rating > 0) {
                         movies = movies.filter(m => m.rating && m.rating >= rating);
                     }
                     break;
             }
 
+            // Apply service filter
+            if (service) {
+                movies = movies.filter(m => m.streaming_services.some(s => s.toLowerCase().includes(service.toLowerCase())));
+            }
+
+            // Apply genre filter
+            if (genre) {
+                movies = movies.filter(m => (m.genres || []).includes(genre));
+            }
+
+            // Limit results based on tab
+            const limits = { top: 30, random: 12, all: 50 };
+            movies = movies.slice(0, limits[tab] || 50);
+
+            // Apply sorting
+            movies = sortMovies(movies, sort);
+
+            // Update filter dropdowns based on available movies for this tab
+            updateServiceFilter(allMoviesForFilter);
+            updateGenreFilter(allMoviesForFilter);
+
             renderMovies(movies);
+        }
+
+        function sortMovies(movies, sortType) {
+            if (!movies || !movies.length) return movies;
+
+            const sorted = [...movies];
+
+            switch(sortType) {
+                case 'rating_desc':
+                    sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    break;
+                case 'rating_asc':
+                    sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+                    break;
+                case 'year_desc':
+                    sorted.sort((a, b) => (b.year || 0) - (a.year || 0));
+                    break;
+                case 'year_asc':
+                    sorted.sort((a, b) => (a.year || 0) - (b.year || 0));
+                    break;
+                case 'title_asc':
+                    sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                    break;
+                case 'title_desc':
+                    sorted.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+                    break;
+            }
+
+            return sorted;
         }
 
         async function searchMovies() {
@@ -786,6 +2607,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            loadSettings();
             updateMyListBadge();
             await loadServices();
             showTab('top');
