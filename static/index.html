@@ -548,12 +548,66 @@
             }, 3000);
         }
 
+        // --- API Cache (localStorage) ---
+        const API_CACHE_KEY = 'apiCache';
+        const API_CACHE_TTL = 30 * 60 * 1000; // 30 minutes in ms
+
+        function getApiCache() {
+            try {
+                const data = localStorage.getItem(API_CACHE_KEY);
+                return data ? JSON.parse(data) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function setApiCache(endpoint, data) {
+            try {
+                const cache = getApiCache();
+                cache[endpoint] = {
+                    data: data,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(API_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                console.error('Cache write error:', e);
+            }
+        }
+
+        function getCachedResponse(endpoint) {
+            const cache = getApiCache();
+            const entry = cache[endpoint];
+            if (entry && (Date.now() - entry.timestamp) < API_CACHE_TTL) {
+                console.log('Cache hit:', endpoint);
+                return entry.data;
+            }
+            return null;
+        }
+
+        function clearApiCache() {
+            localStorage.removeItem(API_CACHE_KEY);
+            showToast('Cache cleared', 'success');
+        }
+
         // --- API Functions ---
-        async function fetchAPI(endpoint) {
+        async function fetchAPI(endpoint, skipCache = false) {
+            // Check cache first (skip for search queries)
+            if (!skipCache && !endpoint.includes('/search')) {
+                const cached = getCachedResponse(endpoint);
+                if (cached) return cached;
+            }
+
             try {
                 const response = await fetch(API_BASE + endpoint);
                 if (!response.ok) throw new Error('API error');
-                return await response.json();
+                const data = await response.json();
+
+                // Cache the response (skip search results)
+                if (!endpoint.includes('/search')) {
+                    setApiCache(endpoint, data);
+                }
+
+                return data;
             } catch (error) {
                 console.error('Fetch error:', error);
                 return null;

@@ -5,6 +5,8 @@ Movie Scraper API - REST endpoints to find free movies in India.
 Run with: uvicorn api:app --reload
 """
 
+import json
+import os
 import random
 import time
 from pathlib import Path
@@ -28,6 +30,9 @@ app = FastAPI(
 
 # Serve static files
 STATIC_DIR = Path(__file__).parent / "static"
+CACHE_DIR = Path(__file__).parent / "cache"
+CACHE_FILE = CACHE_DIR / "movies.json"
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -41,15 +46,46 @@ app.add_middleware(
 )
 
 
-# --- Cache Layer ---
+# --- Cache Layer with File Persistence ---
 class MovieCache:
-    """Simple in-memory cache for movie data."""
+    """Cache with in-memory + file persistence."""
 
-    def __init__(self, ttl_seconds: int = 3600):  # 1 hour default
+    def __init__(self, ttl_seconds: int = 21600):  # 6 hours default
         self.ttl = ttl_seconds
         self._movies: List[Movie] = []
         self._last_fetch: float = 0
         self._is_fetching: bool = False
+        self._load_from_file()
+
+    def _load_from_file(self):
+        """Load cache from JSON file on startup."""
+        try:
+            if CACHE_FILE.exists():
+                file_age = time.time() - os.path.getmtime(CACHE_FILE)
+                if file_age < self.ttl:
+                    with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    self._movies = [Movie.from_dict(m) for m in data.get("movies", [])]
+                    self._last_fetch = data.get("timestamp", time.time() - file_age)
+                    print(f"Loaded {len(self._movies)} movies from cache file (age: {file_age/3600:.1f}h)")
+                else:
+                    print(f"Cache file is stale ({file_age/3600:.1f}h old), will refresh")
+        except Exception as e:
+            print(f"Error loading cache file: {e}")
+
+    def save_to_file(self):
+        """Save cache to JSON file."""
+        try:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            data = {
+                "timestamp": self._last_fetch,
+                "movies": [m.to_dict() for m in self._movies]
+            }
+            with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+            print(f"Saved {len(self._movies)} movies to cache file")
+        except Exception as e:
+            print(f"Error saving cache file: {e}")
 
     def is_stale(self) -> bool:
         return time.time() - self._last_fetch > self.ttl
@@ -60,13 +96,14 @@ class MovieCache:
     def set_movies(self, movies: List[Movie]):
         self._movies = movies
         self._last_fetch = time.time()
+        self.save_to_file()
 
     def is_empty(self) -> bool:
         return len(self._movies) == 0
 
 
 # Global cache instance
-cache = MovieCache(ttl_seconds=3600)  # Cache for 1 hour
+cache = MovieCache(ttl_seconds=21600)  # Cache for 6 hours
 
 
 def fetch_and_cache_movies(limit: int = 500, include_archive: bool = True) -> List[Movie]:
