@@ -49,25 +49,37 @@
 
         header {
             text-align: center;
-            padding: 50px 20px;
+            padding: 15px 20px;
             background: linear-gradient(135deg, rgba(255,71,87,0.1) 0%, rgba(255,165,2,0.1) 100%);
-            border-radius: 24px;
-            margin-bottom: 30px;
+            border-radius: 16px;
+            margin-bottom: 15px;
             border: 1px solid rgba(255,255,255,0.05);
             backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 15px;
+            gap: 10px;
         }
 
         .logo-icon {
-            width: 60px;
-            height: 60px;
+            width: 40px;
+            height: 40px;
             transition: transform 0.3s ease;
         }
 
@@ -76,7 +88,7 @@
         }
 
         .logo-text {
-            font-size: 2.8rem;
+            font-size: 1.8rem;
             font-weight: 700;
             background: var(--gradient);
             -webkit-background-clip: text;
@@ -91,8 +103,9 @@
 
         .tagline {
             color: var(--text-muted);
-            font-size: 1.15rem;
+            font-size: 0.9rem;
             font-weight: 400;
+            display: none;
         }
 
         .tagline strong {
@@ -100,17 +113,107 @@
             font-weight: 600;
         }
 
+        .header-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .header-stat {
+            text-align: center;
+            padding: 8px 15px;
+            background: var(--bg-surface);
+            border-radius: 12px;
+        }
+
+        .header-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .header-stat-value.mylist {
+            color: var(--secondary);
+        }
+
+        .header-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .genre-row {
+            margin-bottom: 40px;
+        }
+
+        .genre-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding-left: 5px;
+        }
+
+        .genre-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .genre-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: var(--bg-surface);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .genre-movies {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 15px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-surface);
+        }
+
+        .genre-movies::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .genre-movies::-webkit-scrollbar-track {
+            background: var(--bg-surface);
+            border-radius: 4px;
+        }
+
+        .genre-movies::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        .genre-movies::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+
+        .genre-movies .movie-card {
+            flex-shrink: 0;
+            width: 280px;
+        }
+
         .search-box {
             display: flex;
-            gap: 12px;
-            max-width: 600px;
-            margin: 30px auto;
+            gap: 10px;
+            max-width: 400px;
+            flex: 1;
         }
 
         .search-box input {
             flex: 1;
-            padding: 16px 24px;
-            font-size: 1rem;
+            padding: 12px 20px;
+            font-size: 0.95rem;
             font-family: inherit;
             border: 2px solid transparent;
             border-radius: 50px;
@@ -130,8 +233,8 @@
         }
 
         .search-box button {
-            padding: 16px 32px;
-            font-size: 1rem;
+            padding: 12px 24px;
+            font-size: 0.95rem;
             font-family: inherit;
             font-weight: 600;
             border: none;
@@ -149,21 +252,21 @@
 
         .tabs {
             display: flex;
-            gap: 12px;
+            gap: 8px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 8px 18px;
             border: 2px solid rgba(255,255,255,0.1);
             border-radius: 50px;
             background: var(--bg-surface);
             color: var(--text);
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             font-family: inherit;
             font-weight: 500;
         }
@@ -201,19 +304,19 @@
 
         .filters {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
         }
 
         .filters select {
-            padding: 12px 20px;
-            border-radius: 25px;
+            padding: 8px 15px;
+            border-radius: 20px;
             border: 2px solid rgba(255,255,255,0.1);
             background: var(--bg-surface);
             color: var(--text);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-family: inherit;
             cursor: pointer;
             outline: none;
@@ -409,34 +512,23 @@
         }
 
         .stats {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
+            display: none;
         }
 
         .stat {
-            text-align: center;
-            padding: 15px 25px;
-            background: var(--bg-surface);
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
+            display: none;
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
+            display: none;
         }
 
         .stat-value.mylist {
-            color: var(--secondary);
+            display: none;
         }
 
         .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
+            display: none;
         }
 
         .toast {
@@ -1017,6 +1109,39 @@
             animation: fadeIn 0.2s ease;
         }
 
+        /* Filter Toggle */
+        .filter-toggle {
+            padding: 8px 18px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            background: var(--bg-surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            font-family: inherit;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .filter-toggle:hover {
+            border-color: var(--primary);
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        .filter-toggle.active {
+            background: var(--gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        .filters.hidden {
+            display: none !important;
+        }
+
         .settings-panel h4 {
             margin-bottom: 15px;
             font-size: 1rem;
@@ -1066,6 +1191,64 @@
             font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s ease;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .toggle-row label {
+            font-size: 0.85rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(231, 76, 60, 0.3);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
         }
 
         .btn-danger {
@@ -1279,11 +1462,11 @@
         /* Search Feedback */
         .search-feedback {
             text-align: center;
-            padding: 10px 20px;
-            margin: -10px auto 20px;
-            max-width: 400px;
-            border-radius: 20px;
-            font-size: 0.85rem;
+            padding: 8px 15px;
+            margin: -5px auto 10px;
+            max-width: 350px;
+            border-radius: 15px;
+            font-size: 0.8rem;
             animation: fadeIn 0.2s ease;
             display: none;
         }
@@ -1341,31 +1524,29 @@
 <body>
     <div class="container">
         <header>
-            <div class="logo">
-                <!-- Lazy Eye Logo SVG -->
-                <svg class="logo-icon" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#FF4757"/>
-                            <stop offset="100%" style="stop-color:#FFA502"/>
-                        </linearGradient>
-                    </defs>
-                    <!-- Lazy half-closed eye shape -->
-                    <ellipse cx="30" cy="30" rx="28" ry="18" stroke="url(#logoGradient)" stroke-width="3" fill="none"/>
-                    <!-- Droopy eyelid (lazy look) -->
-                    <path d="M2 30 Q30 5 58 30" stroke="url(#logoGradient)" stroke-width="3" fill="rgba(15,15,26,0.9)"/>
-                    <!-- Play button as pupil -->
-                    <path d="M24 22 L24 38 L40 30 Z" fill="url(#logoGradient)"/>
-                </svg>
-                <h1 class="logo-text">Watch<span>lazy</span></h1>
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo">
+                        <svg class="logo-icon" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#FF4757"/>
+                                    <stop offset="100%" style="stop-color:#FFA502"/>
+                                </linearGradient>
+                            </defs>
+                            <ellipse cx="30" cy="30" rx="28" ry="18" stroke="url(#logoGradient)" stroke-width="3" fill="none"/>
+                            <path d="M2 30 Q30 5 58 30" stroke="url(#logoGradient)" stroke-width="3" fill="rgba(15,15,26,0.9)"/>
+                            <path d="M24 22 L24 38 L40 30 Z" fill="url(#logoGradient)"/>
+                        </svg>
+                        <h1 class="logo-text">Watch<span>lazy</span></h1>
+                    </div>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for a movie..." onkeypress="if(event.key==='Enter') searchMovies()">
+                    <button onclick="searchMovies()">Search</button>
+                </div>
             </div>
-            <p class="tagline">Free movies. <strong>Zero effort.</strong></p>
         </header>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search for a movie..." onkeypress="if(event.key==='Enter') searchMovies()">
-            <button onclick="searchMovies()">Search</button>
-        </div>
 
         <div class="search-feedback" id="searchFeedback">
             <span class="feedback-icon"></span>
@@ -1375,12 +1556,13 @@
         <div class="tabs">
             <button class="tab foryou-tab" data-tab="foryou" onclick="showTab('foryou', this)">For You ✨</button>
             <button class="tab active" data-tab="top" onclick="showTab('top', this)">Top Rated</button>
-            <button class="tab" data-tab="random" onclick="showTab('random', this)">Random Picks</button>
+            <button class="tab" data-tab="random" onclick="showTab('random', this)">Surprise Me!</button>
             <button class="tab" data-tab="all" onclick="showTab('all', this)">Browse All</button>
             <button class="tab mylist-tab" data-tab="mylist" onclick="showTab('mylist', this)">My List <span class="badge" id="myListBadge">0</span></button>
+            <button class="filter-toggle" id="filterToggle" onclick="toggleFilters()" title="Toggle Filters">🎛️</button>
         </div>
 
-        <div class="filters" id="filtersContainer">
+        <div class="filters hidden" id="filtersContainer">
             <select id="genreFilter" onchange="applyFilters()">
                 <option value="">All Genres</option>
             </select>
@@ -1402,8 +1584,6 @@
                 <option value="title_desc">Title: Z-A</option>
             </select>
         </div>
-
-        <div class="stats" id="stats"></div>
 
         <div id="moviesContainer">
             <div class="loading">Loading movies</div>
@@ -1428,7 +1608,7 @@
                     <div class="spinner"></div>
                     <p>Loading video...</p>
                 </div>
-                <iframe id="videoFrame" allowfullscreen onload="hideVideoLoading()"></iframe>
+                <iframe id="videoFrame" allowfullscreen></iframe>
             </div>
         </div>
     </div>
@@ -1450,19 +1630,12 @@
     <button class="settings-toggle" onclick="toggleSettings()" title="Settings">&#9881;</button>
     <div class="settings-panel" id="settingsPanel">
         <h4>Settings</h4>
-        <div class="setting-row">
-            <label>Cache Duration</label>
-            <select id="cacheDuration" onchange="updateCacheDuration()">
-                <option value="5">5 minutes</option>
-                <option value="15">15 minutes</option>
-                <option value="30" selected>30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="360">6 hours</option>
-            </select>
-        </div>
-        <div class="settings-actions">
-            <button class="btn-secondary" onclick="clearApiCache(); toggleSettings()">Clear Cache</button>
-            <button class="btn-danger" onclick="clearHiddenMovies()">Unhide All</button>
+        <div class="toggle-row">
+            <label for="showHiddenToggle">Show Hidden Movies</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="showHiddenToggle" onchange="toggleShowHidden()">
+                <span class="toggle-slider"></span>
+            </label>
         </div>
     </div>
 
@@ -1495,6 +1668,13 @@
             document.getElementById('settingsPanel').classList.toggle('show');
         }
 
+        function toggleFilters() {
+            const filtersContainer = document.getElementById('filtersContainer');
+            const filterToggle = document.getElementById('filterToggle');
+            filtersContainer.classList.toggle('hidden');
+            filterToggle.classList.toggle('active');
+        }
+
         function updateCacheDuration() {
             const duration = parseInt(document.getElementById('cacheDuration').value);
             const settings = getSettings();
@@ -1505,7 +1685,10 @@
 
         function loadSettings() {
             const settings = getSettings();
-            document.getElementById('cacheDuration').value = settings.cacheDuration;
+            const cacheDurationEl = document.getElementById('cacheDuration');
+            if (cacheDurationEl) {
+                cacheDurationEl.value = settings.cacheDuration;
+            }
         }
 
         // --- Reactions (loved, liked, meh, disliked) ---
@@ -1638,14 +1821,13 @@
             return !!hidden[getMovieKey(movie)];
         }
 
-        function clearHiddenMovies() {
-            const hidden = getHiddenMovies();
-            const count = Object.keys(hidden).length;
-            localStorage.removeItem(HIDDEN_KEY);
-            showToast(`${count} movies unhidden`, 'success');
-            toggleSettings();
+        let showHiddenMovies = false;
+
+        function toggleShowHidden() {
+            showHiddenMovies = document.getElementById('showHiddenToggle').checked;
+            showToast(showHiddenMovies ? 'Showing hidden movies' : 'Hiding hidden movies', 'success');
             // Refresh current view
-            if (currentTab !== 'mylist') {
+            if (currentTab !== 'mylist' && currentTab !== 'foryou') {
                 showTab(currentTab);
             }
         }
@@ -2036,6 +2218,10 @@
         function updateMyListBadge() {
             const count = getMyList().length;
             document.getElementById('myListBadge').textContent = count;
+            const headerMyList = document.getElementById('headerMyList');
+            if (headerMyList) {
+                headerMyList.textContent = count;
+            }
         }
 
         function showToast(message, type = '') {
@@ -2122,9 +2308,20 @@
             if (!embedUrl) return;
 
             // Show loading spinner
-            document.getElementById('videoLoading').classList.remove('hidden');
-            document.getElementById('modalTitle').textContent = movie.title;
-            document.getElementById('videoFrame').src = embedUrl;
+            const videoLoading = document.getElementById('videoLoading');
+            const videoFrame = document.getElementById('videoFrame');
+            const modalTitle = document.getElementById('modalTitle');
+            
+            if (videoLoading) videoLoading.classList.remove('hidden');
+            if (modalTitle) modalTitle.textContent = movie.title;
+            if (videoFrame) {
+                videoFrame.src = embedUrl;
+                // Hide loading after a short delay to allow iframe to start loading
+                videoFrame.onload = function() {
+                    if (videoLoading) videoLoading.classList.add('hidden');
+                };
+            }
+            
             document.getElementById('videoModal').classList.add('show');
             document.body.style.overflow = 'hidden';
         }
@@ -2353,9 +2550,131 @@
             return btoa(encodeURIComponent(`${movie.title}_${movie.year}`)).replace(/[^a-zA-Z0-9]/g, '');
         }
 
+        function createMovieCard(movie, index) {
+            const inList = isInMyList(movie);
+            const movieId = `movie_${index}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const canEmbed = isEmbeddable(movie);
+            const watched = isWatched(movie);
+            const reaction = getMovieReaction(movie);
+
+            // Store movie data globally for access by click handler
+            window.movieDataStore = window.movieDataStore || {};
+            window.movieDataStore[movieId] = movie;
+
+            // Generate watch button based on source
+            let watchButton = '';
+            if (movie.source_urls && movie.source_urls.length > 0) {
+                if (canEmbed) {
+                    watchButton = `<button class="watch-btn watch-here" onclick="openPlayer('${movieId}')">▶ Watch Here</button>`;
+                } else {
+                    watchButton = `<a href="${movie.source_urls[0]}" target="_blank" class="watch-btn">Watch Now →</a>`;
+                }
+            }
+
+            // Reaction buttons
+            const reactionBtns = Object.entries(REACTIONS).map(([key, emoji]) =>
+                `<button class="reaction-btn ${reaction === key ? 'active' : ''}" 
+                        data-reaction-movie="${movieId}"
+                        data-reaction="${key}"
+                        onclick="setReaction('${movieId}', '${key}')"
+                        title="${key}">${emoji}</button>`
+            ).join('');
+
+            return `
+            <div class="movie-card ${inList ? 'in-list' : ''} ${watched ? 'watched' : ''}" data-card-movie="${movieId}">
+                <div class="poster-container">
+                    <img class="movie-poster" src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 200%22><rect fill=%22%232d3436%22/></svg>'">
+                    ${canEmbed ? '<span class="embeddable-badge">Watch on Site</span>' : ''}
+                    ${watched ? '<span class="watched-badge">Watched</span>' : ''}
+                </div>
+                <div class="movie-info">
+                    <div class="movie-title" title="${movie.title}" onclick="openDetailView('${movieId}')">${movie.title}</div>
+                    <div class="movie-meta">
+                        ${movie.year ? `<span>${movie.year}</span>` : ''}
+                        ${movie.rating ? `<span class="movie-rating">IMDb ${movie.rating}</span>` : ''}
+                        ${movie.runtime_minutes ? `<span>${movie.runtime_minutes} min</span>` : ''}
+                    </div>
+                    <div class="movie-synopsis">${movie.synopsis || 'No description available.'}</div>
+                    <div class="movie-services">
+                        ${movie.streaming_services.map(s => `<span class="service-tag">${s}</span>`).join('')}
+                    </div>
+                    <div class="movie-actions">
+                        ${watchButton}
+                        <button class="list-btn ${inList ? 'in-list' : ''}" data-movie-id="${movieId}" onclick="handleListClick(this)">
+                            ${inList ? '✓ In My List' : '+ Add to List'}
+                        </button>
+                    </div>
+                    <div class="movie-user-actions">
+                        <div class="reaction-btns">${reactionBtns}</div>
+                        <button class="watched-btn ${watched ? 'active' : ''}" data-watched-movie="${movieId}" onclick="toggleWatched('${movieId}')">
+                            ${watched ? '✓ Watched' : '👁 Mark Watched'}
+                        </button>
+                        <button class="delete-btn" onclick="hideMovie('${movieId}')" title="Hide this movie">✕</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        }
+
+        function renderMoviesByGenre(movies) {
+            // Filter out hidden movies unless toggle is on
+            if (!showHiddenMovies) {
+                movies = movies.filter(m => !isHidden(m));
+            }
+
+            if (!movies || movies.length === 0) {
+                showNoResults();
+                return;
+            }
+
+            // Store movies for related movies lookup
+            cachedMovies = movies;
+
+            // Group movies by genre
+            const genreGroups = {};
+            movies.forEach(movie => {
+                if (movie.genres && movie.genres.length > 0) {
+                    movie.genres.forEach(genreCode => {
+                        if (!genreGroups[genreCode]) {
+                            genreGroups[genreCode] = [];
+                        }
+                        genreGroups[genreCode].push(movie);
+                    });
+                }
+            });
+
+            // Sort genre groups by count (descending)
+            const sortedGenres = Object.entries(genreGroups)
+                .sort((a, b) => b[1].length - a[1].length)
+                .slice(0, 15); // Show top 15 genres
+
+            // Build HTML
+            const html = sortedGenres.map(([genreCode, genreMovies]) => {
+                const genreName = getGenreName(genreCode);
+                const movieCards = genreMovies
+                    .slice(0, 20) // Limit to 20 movies per genre
+                    .map((movie, index) => createMovieCard(movie, index))
+                    .join('');
+
+                return `
+                <div class="genre-row">
+                    <div class="genre-header">
+                        <h2 class="genre-title">${genreName}</h2>
+                        <span class="genre-count">${genreMovies.length} movies</span>
+                    </div>
+                    <div class="genre-movies">
+                        ${movieCards}
+                    </div>
+                </div>
+            `;
+            }).join('');
+
+            document.getElementById('moviesContainer').innerHTML = html;
+        }
+
         function renderMovies(movies, isMyListView = false) {
-            // Filter out hidden movies (unless in My List view)
-            if (!isMyListView) {
+            // Filter out hidden movies (unless in My List view or toggle is on)
+            if (!isMyListView && !showHiddenMovies) {
                 movies = movies.filter(m => !isHidden(m));
             }
 
@@ -2377,71 +2696,7 @@
             // Store movies for related movies lookup
             cachedMovies = movies;
 
-            const html = movies.map((movie, index) => {
-                const inList = isInMyList(movie);
-                const movieId = `movie_${index}_${Date.now()}`;
-                const canEmbed = isEmbeddable(movie);
-                const watched = isWatched(movie);
-                const reaction = getMovieReaction(movie);
-
-                // Store movie data globally for access by click handler
-                window.movieDataStore = window.movieDataStore || {};
-                window.movieDataStore[movieId] = movie;
-
-                // Generate watch button based on source
-                let watchButton = '';
-                if (movie.source_urls && movie.source_urls.length > 0) {
-                    if (canEmbed) {
-                        watchButton = `<button class="watch-btn watch-here" onclick="openPlayer('${movieId}')">▶ Watch Here</button>`;
-                    } else {
-                        watchButton = `<a href="${movie.source_urls[0]}" target="_blank" class="watch-btn">Watch Now →</a>`;
-                    }
-                }
-
-                // Reaction buttons
-                const reactionBtns = Object.entries(REACTIONS).map(([key, emoji]) =>
-                    `<button class="reaction-btn ${reaction === key ? 'active' : ''}"
-                            data-reaction-movie="${movieId}"
-                            data-reaction="${key}"
-                            onclick="setReaction('${movieId}', '${key}')"
-                            title="${key}">${emoji}</button>`
-                ).join('');
-
-                return `
-                <div class="movie-card ${inList ? 'in-list' : ''} ${watched ? 'watched' : ''}" data-card-movie="${movieId}">
-                    <div class="poster-container">
-                        <img class="movie-poster" src="${getPosterUrl(movie)}" alt="${movie.title}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 300 200%22><rect fill=%22%232d3436%22/></svg>'">
-                        ${canEmbed ? '<span class="embeddable-badge">Watch on Site</span>' : ''}
-                        ${watched ? '<span class="watched-badge">Watched</span>' : ''}
-                    </div>
-                    <div class="movie-info">
-                        <div class="movie-title" title="${movie.title}" onclick="openDetailView('${movieId}')">${movie.title}</div>
-                        <div class="movie-meta">
-                            ${movie.year ? `<span>${movie.year}</span>` : ''}
-                            ${movie.rating ? `<span class="movie-rating">IMDb ${movie.rating}</span>` : ''}
-                            ${movie.runtime_minutes ? `<span>${movie.runtime_minutes} min</span>` : ''}
-                        </div>
-                        <div class="movie-synopsis">${movie.synopsis || 'No description available.'}</div>
-                        <div class="movie-services">
-                            ${movie.streaming_services.map(s => `<span class="service-tag">${s}</span>`).join('')}
-                        </div>
-                        <div class="movie-actions">
-                            ${watchButton}
-                            <button class="list-btn ${inList ? 'in-list' : ''}" data-movie-id="${movieId}" onclick="handleListClick(this)">
-                                ${inList ? '✓ In My List' : '+ Add to List'}
-                            </button>
-                        </div>
-                        <div class="movie-user-actions">
-                            <div class="reaction-btns">${reactionBtns}</div>
-                            <button class="watched-btn ${watched ? 'active' : ''}" data-watched-movie="${movieId}" onclick="toggleWatched('${movieId}')">
-                                ${watched ? '✓ Watched' : '👁 Mark Watched'}
-                            </button>
-                            <button class="delete-btn" onclick="hideMovie('${movieId}')" title="Hide this movie">✕</button>
-                        </div>
-                    </div>
-                </div>
-            `}).join('');
-
+            const html = movies.map((movie, index) => createMovieCard(movie, index)).join('');
             document.getElementById('moviesContainer').innerHTML = `<div class="movies-grid">${html}</div>`;
         }
 
@@ -2524,20 +2779,14 @@
 
         function updateStats(totalMovies, servicesCount) {
             const myListCount = getMyList().length;
-            document.getElementById('stats').innerHTML = `
-                <div class="stat">
-                    <div class="stat-value">${totalMovies || '...'}</div>
-                    <div class="stat-label">Free Movies</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">${servicesCount || '...'}</div>
-                    <div class="stat-label">Streaming Services</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value mylist">${myListCount}</div>
-                    <div class="stat-label">In My List</div>
-                </div>
-            `;
+            // Update header stats if they exist
+            const headerTotalMovies = document.getElementById('headerTotalMovies');
+            const headerServices = document.getElementById('headerServices');
+            const headerMyList = document.getElementById('headerMyList');
+            
+            if (headerTotalMovies) headerTotalMovies.textContent = totalMovies || '0';
+            if (headerServices) headerServices.textContent = servicesCount || '0';
+            if (headerMyList) headerMyList.textContent = myListCount;
         }
 
         function showMyList() {
@@ -2555,19 +2804,19 @@
                 document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
             }
 
-            // Show/hide filters based on tab
-            const filtersContainer = document.getElementById('filtersContainer');
+            // Show/hide filter toggle based on tab
+            const filterToggle = document.getElementById('filterToggle');
 
             if (tab === 'mylist') {
-                filtersContainer.style.display = 'none';
+                filterToggle.style.display = 'none';
                 showMyList();
                 return;
             } else if (tab === 'foryou') {
-                filtersContainer.style.display = 'none';
+                filterToggle.style.display = 'none';
                 showRecommendations();
                 return;
             } else {
-                filtersContainer.style.display = 'flex';
+                filterToggle.style.display = 'flex';
             }
 
             showLoading();
@@ -2588,7 +2837,7 @@
                     movies = allMoviesForFilter;
                     break;
                 case 'random':
-                    allMoviesForFilter = await fetchAPI(`/movies/random?count=30`);
+                    allMoviesForFilter = await fetchAPI(`/movies/random?count=20`);
                     movies = allMoviesForFilter;
                     break;
                 case 'all':
@@ -2621,7 +2870,12 @@
             updateServiceFilter(allMoviesForFilter);
             updateGenreFilter(allMoviesForFilter);
 
-            renderMovies(movies);
+            // Use genre-grouped view for top and all tabs when no filters are active
+            if (tab !== 'random' && !genre && !service) {
+                renderMoviesByGenre(movies);
+            } else {
+                renderMovies(movies);
+            }
         }
 
         function sortMovies(movies, sortType) {
