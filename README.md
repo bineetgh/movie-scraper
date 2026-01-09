@@ -106,7 +106,7 @@ movie-scraper/
 
 ## Data Sources
 
-- **JustWatch India** - Free movies from streaming platforms (JioHotstar, Zee5, MX Player, etc.)
+- **JustWatch India** - Free movies from streaming platforms (JioHotstar, MX Player, etc.)
 - **Internet Archive** - Public domain and freely available films
 
 ## Browser Storage
