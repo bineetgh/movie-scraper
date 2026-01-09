@@ -1275,6 +1275,67 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
+
+        /* Search Feedback */
+        .search-feedback {
+            text-align: center;
+            padding: 10px 20px;
+            margin: -10px auto 20px;
+            max-width: 400px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            animation: fadeIn 0.2s ease;
+            display: none;
+        }
+
+        .search-feedback.show {
+            display: block;
+        }
+
+        .search-feedback.cache {
+            background: rgba(46, 204, 113, 0.15);
+            color: #2ecc71;
+        }
+
+        .search-feedback.online {
+            background: rgba(52, 152, 219, 0.15);
+            color: #3498db;
+        }
+
+        .search-feedback.mixed {
+            background: rgba(155, 89, 182, 0.15);
+            color: #9b59b6;
+        }
+
+        .search-feedback.searching {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+
+        .feedback-icon {
+            margin-right: 8px;
+        }
+
+        /* Search More Button */
+        .search-more-btn {
+            display: block;
+            margin: 0 auto 25px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-more-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -1304,6 +1365,11 @@
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search for a movie..." onkeypress="if(event.key==='Enter') searchMovies()">
             <button onclick="searchMovies()">Search</button>
+        </div>
+
+        <div class="search-feedback" id="searchFeedback">
+            <span class="feedback-icon"></span>
+            <span class="feedback-text"></span>
         </div>
 
         <div class="tabs">
@@ -2587,16 +2653,104 @@
             return sorted;
         }
 
+        // --- Debounce Utility ---
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // --- Search Feedback Functions ---
+        let currentSearchQuery = '';
+
+        function showSearchFeedback(source, cacheCount = 0, onlineCount = 0) {
+            const feedback = document.getElementById('searchFeedback');
+            const messages = {
+                'searching': { icon: '🔍', text: 'Searching...', class: 'searching' },
+                'cache': { icon: '⚡', text: `${cacheCount} results (instant)`, class: 'cache' },
+                'online': { icon: '🌐', text: `${onlineCount} results from online`, class: 'online' },
+                'mixed': { icon: '✨', text: `${cacheCount} cached + ${onlineCount} online`, class: 'mixed' },
+            };
+
+            const config = messages[source];
+            if (config) {
+                feedback.className = `search-feedback show ${config.class}`;
+                feedback.innerHTML = `<span class="feedback-icon">${config.icon}</span><span>${config.text}</span>`;
+            }
+        }
+
+        function hideSearchFeedback() {
+            document.getElementById('searchFeedback').className = 'search-feedback';
+        }
+
+        function showSearchMoreButton(query) {
+            // Remove existing button if any
+            hideSearchMoreButton();
+
+            const btn = document.createElement('button');
+            btn.id = 'searchMoreBtn';
+            btn.className = 'search-more-btn';
+            btn.innerHTML = '🌐 Search More Online';
+            btn.onclick = () => performSearch(query, true);
+
+            const container = document.getElementById('moviesContainer');
+            container.insertBefore(btn, container.firstChild);
+        }
+
+        function hideSearchMoreButton() {
+            const btn = document.getElementById('searchMoreBtn');
+            if (btn) btn.remove();
+        }
+
+        // --- Main Search Function (Cache-First) ---
+        async function performSearch(query, forceOnline = false) {
+            showSearchFeedback('searching');
+            hideSearchMoreButton();
+
+            const params = new URLSearchParams({
+                q: query,
+                force_online: forceOnline,
+                cache_min_results: 5,
+            });
+
+            const data = await fetchAPI(`/movies/search?${params}`, true);
+
+            if (data && data.results) {
+                showSearchFeedback(data.source, data.cache_count, data.online_count);
+                renderMovies(data.results);
+
+                // Show "Search More" button if only cache results and limited count
+                if (data.source === 'cache' && data.cache_count < 10 && data.cache_count > 0) {
+                    showSearchMoreButton(query);
+                }
+            } else {
+                hideSearchFeedback();
+                showNoResults('No movies found');
+            }
+        }
+
+        // Debounced search for live typing (optional)
+        const debouncedSearch = debounce((query) => {
+            if (query.length >= 2) {
+                performSearch(query, false);
+            }
+        }, 300);
+
         async function searchMovies() {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
 
-            showLoading();
+            currentSearchQuery = query;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById('filtersContainer').style.display = 'none';
 
-            const movies = await fetchAPI(`/movies/search?q=${encodeURIComponent(query)}`);
-            renderMovies(movies);
+            await performSearch(query, false);
         }
 
         async function applyFilters() {
@@ -2611,6 +2765,14 @@
             updateMyListBadge();
             await loadServices();
             showTab('top');
+
+            // Hide search feedback when switching tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    hideSearchFeedback();
+                    hideSearchMoreButton();
+                });
+            });
         });
     </script>
 </body>

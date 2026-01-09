@@ -13,9 +13,29 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, Query, HTTPException
+
+
+def load_env_file():
+    """Load environment variables from .env file if it exists."""
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), value.strip())
+
+
+# Load .env file
+load_env_file()
+
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
+# Configuration from environment
+CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "21600"))  # Default: 6 hours
 
 from models.movie import Movie
 from scrapers.justwatch import JustWatchScraper
@@ -103,7 +123,7 @@ class MovieCache:
 
 
 # Global cache instance
-cache = MovieCache(ttl_seconds=21600)  # Cache for 6 hours
+cache = MovieCache(ttl_seconds=CACHE_TTL_SECONDS)
 
 
 def fetch_and_cache_movies(limit: int = 500, include_archive: bool = True) -> List[Movie]:
@@ -137,6 +157,97 @@ def get_cached_movies() -> List[Movie]:
     if cache.is_empty() or cache.is_stale():
         return fetch_and_cache_movies()
     return cache.get_movies()
+
+
+def search_cached_movies(query: str, movies: List[Movie]) -> List[Movie]:
+    """
+    Search cached movies with relevance scoring.
+
+    Scoring:
+    - Exact title match: 100
+    - Partial title match: 50
+    - Word in title: 25
+    - Director match: 20
+    - Cast match: 15
+    - Genre match: 5
+    - Synopsis match: 3
+    """
+    if not query or not movies:
+        return []
+
+    query_lower = query.lower().strip()
+    query_parts = query_lower.split()
+    scored_results = []
+
+    for movie in movies:
+        score = 0.0
+
+        # Title matching (highest weight)
+        title_lower = movie.title.lower()
+        if title_lower == query_lower:
+            score += 100  # Exact title match
+        elif query_lower in title_lower:
+            score += 50  # Partial title match
+        elif any(part in title_lower for part in query_parts if len(part) > 2):
+            score += 25  # Word match in title
+
+        # Director matching
+        if movie.director:
+            director_lower = movie.director.lower()
+            if query_lower in director_lower:
+                score += 20
+            elif any(part in director_lower for part in query_parts if len(part) > 2):
+                score += 10
+
+        # Cast matching
+        for actor in (movie.cast or []):
+            actor_lower = actor.lower()
+            if query_lower in actor_lower:
+                score += 15
+                break  # Only count once
+            elif any(part in actor_lower for part in query_parts if len(part) > 2):
+                score += 8
+                break
+
+        # Genre matching (lower weight)
+        for genre in (movie.genres or []):
+            if query_lower in genre.lower():
+                score += 5
+                break
+
+        # Synopsis matching (lowest weight)
+        if movie.synopsis and query_lower in movie.synopsis.lower():
+            score += 3
+
+        if score > 0:
+            scored_results.append((movie, score))
+
+    # Sort by score descending
+    scored_results.sort(key=lambda x: x[1], reverse=True)
+
+    return [m for m, s in scored_results]
+
+
+def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) -> List[Movie]:
+    """
+    Deduplicate movies from cache and online sources.
+    Uses title + year as unique key, prefers cache versions (more complete data).
+    """
+    seen = {}
+
+    # Add cache results first (they're already ranked by relevance)
+    for movie in cache_results:
+        key = (movie.title.lower().strip(), movie.year)
+        if key not in seen:
+            seen[key] = movie
+
+    # Add online results if not duplicate
+    for movie in online_results:
+        key = (movie.title.lower().strip(), movie.year)
+        if key not in seen:
+            seen[key] = movie
+
+    return list(seen.values())
 
 
 # --- API Endpoints ---
@@ -201,29 +312,60 @@ def get_movies(
     return [m.to_dict() for m in movies]
 
 
-@app.get("/movies/search", response_model=List[Dict])
+@app.get("/movies/search")
 def search_movies(
     q: str = Query(..., min_length=1, description="Search query"),
     include_archive: bool = Query(True, description="Include Internet Archive results"),
+    force_online: bool = Query(False, description="Force external API search"),
+    cache_min_results: int = Query(5, ge=0, le=20, description="Minimum cache results before online search"),
 ):
-    """Search for movies by title."""
-    results = []
+    """
+    Search for movies with cache-first strategy.
 
-    # Search JustWatch
-    justwatch = JustWatchScraper()
-    jw_results = justwatch.search(q)
-    results.extend(jw_results)
+    Returns results from cache first. Falls back to external APIs
+    if cache results are below the minimum threshold.
+    """
+    cached_movies = cache.get_movies()
+    cache_results = []
+    online_results = []
+    source = "cache"
 
-    # Search Internet Archive
-    if include_archive:
-        archive = InternetArchiveScraper()
-        ia_results = archive.search(q)
-        results.extend(ia_results)
+    # Step 1: Always search cache first (unless force_online)
+    if not force_online and cached_movies:
+        cache_results = search_cached_movies(q, cached_movies)
 
-    if not results:
-        return []
+    # Step 2: Determine if we need online search
+    needs_online = force_online or len(cache_results) < cache_min_results
 
-    return [m.to_dict() for m in results]
+    # Step 3: Search external APIs if needed
+    if needs_online:
+        source = "mixed" if cache_results else "online"
+
+        # JustWatch search
+        justwatch = JustWatchScraper()
+        jw_results = justwatch.search(q)
+        online_results.extend(jw_results)
+
+        # Internet Archive search
+        if include_archive:
+            archive = InternetArchiveScraper()
+            ia_results = archive.search(q)
+            online_results.extend(ia_results)
+
+    # Step 4: Deduplicate and merge results
+    if online_results:
+        all_results = deduplicate_movies(cache_results, online_results)
+    else:
+        all_results = cache_results
+        source = "cache"
+
+    return {
+        "results": [m.to_dict() for m in all_results],
+        "source": source,
+        "cache_count": len(cache_results),
+        "online_count": len(online_results),
+        "total": len(all_results),
+    }
 
 
 @app.get("/movies/random", response_model=List[Dict])
