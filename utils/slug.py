@@ -1,10 +1,10 @@
 """URL slug generation utilities for SEO-friendly movie URLs."""
 
 from slugify import slugify
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 
-def generate_movie_slug(title: str, year: Optional[int] = None) -> str:
+def generate_movie_slug(title: Union[str, list], year: Optional[int] = None) -> str:
     """
     Generate a URL-friendly slug for a movie.
 
@@ -13,6 +13,14 @@ def generate_movie_slug(title: str, year: Optional[int] = None) -> str:
         "Inception" (2010) -> "inception-2010"
         "Movie Title" (None) -> "movie-title"
     """
+    # Handle case where title is accidentally a list
+    if isinstance(title, list):
+        title = title[0] if title else ""
+    
+    # Ensure title is a string
+    if not isinstance(title, str):
+        title = str(title) if title else ""
+    
     base_slug = slugify(title, lowercase=True, max_length=50)
     if year:
         return f"{base_slug}-{year}"
