@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SearchResultsPage",
+    "name": "Search: {{ query }} - Watchlazy",
+    "url": "{{ base_url }}/search?q={{ query | urlencode }}"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="search-header">
+        {% if query %}
+        <h1>Search results for "{{ query }}"</h1>
+        <p>Found {{ results | length }} movie{% if results | length != 1 %}s{% endif %}</p>
+        {% else %}
+        <h1>Search Movies</h1>
+        <p>Enter a search term to find movies</p>
+        {% endif %}
+    </div>
+
+    {% if results %}
+    <div class="movies-grid">
+        {% for movie in results %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+    {% elif query %}
+    <div class="no-results">
+        <div class="no-results-icon">🔍</div>
+        <h3>No movies found</h3>
+        <p>Try a different search term or <a href="/browse" style="color: var(--primary);">browse all movies</a></p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

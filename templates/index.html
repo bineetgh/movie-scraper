@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Watchlazy",
+    "url": "{{ base_url }}",
+    "description": "{{ page_description }}",
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ base_url }}/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+    }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <h2 style="font-size: 1.3rem; margin-bottom: 20px; color: var(--text);">
+        Top Rated Free Movies
+        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400; margin-left: 10px;">
+            {{ movies | length }} movies
+        </span>
+    </h2>
+
+    <div class="movies-grid">
+        {% for movie in movies %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+
+    {% if movies | length == 0 %}
+    <div class="no-results">
+        <div class="no-results-icon">🎬</div>
+        <h3>No movies available</h3>
+        <p>Check back soon for new content!</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

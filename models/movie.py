@@ -3,6 +3,8 @@ from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
+from utils.slug import generate_movie_slug
+
 
 @dataclass_json
 @dataclass
@@ -19,6 +21,16 @@ class Movie:
     trailer_url: Optional[str] = None
     streaming_services: List[str] = field(default_factory=list)
     source_urls: List[str] = field(default_factory=list)
+
+    @property
+    def slug(self) -> str:
+        """Generate URL slug for this movie."""
+        return generate_movie_slug(self.title, self.year)
+
+    @property
+    def canonical_url(self) -> str:
+        """Get the canonical URL path for this movie."""
+        return f"/movie/{self.slug}"
 
     def merge_with(self, other: "Movie") -> "Movie":
         """Merge another movie's data into this one (for deduplication)."""

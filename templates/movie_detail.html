@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    "name": {{ movie.title | tojson }},
+    "description": {{ (movie.synopsis if movie.synopsis else 'Watch ' + movie.title + ' for free on streaming platforms.') | tojson }},
+    {% if movie.year %}
+    "datePublished": "{{ movie.year }}",
+    {% endif %}
+    {% if movie.director %}
+    "director": {
+        "@type": "Person",
+        "name": {{ movie.director | tojson }}
+    },
+    {% endif %}
+    {% if movie.cast %}
+    "actor": [
+        {% for actor in movie.cast[:5] %}
+        {
+            "@type": "Person",
+            "name": {{ actor | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    {% if movie.genres %}
+    "genre": {{ movie.genres | tojson }},
+    {% endif %}
+    {% if movie.rating %}
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ movie.rating }}",
+        "bestRating": "10",
+        "worstRating": "1",
+        "ratingCount": "1000"
+    },
+    {% endif %}
+    {% if movie.runtime_minutes %}
+    "duration": "PT{{ movie.runtime_minutes }}M",
+    {% endif %}
+    {% if movie.poster_url %}
+    "image": {{ movie.poster_url | tojson }},
+    {% endif %}
+    "url": {{ (base_url + movie.canonical_url) | tojson }}
+}
+</script>
+
+<!-- BreadcrumbList structured data -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ base_url }}/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Movies",
+            "item": "{{ base_url }}/browse"
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "{{ movie.title }}",
+            "item": "{{ base_url }}{{ movie.canonical_url }}"
+        }
+    ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="Breadcrumb" class="breadcrumb">
+    <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/browse">Movies</a></li>
+        <li><span>{{ movie.title }}</span></li>
+    </ol>
+</nav>
+
+<article class="movie-detail">
+    <div class="movie-detail-hero">
+        {% if movie.poster_url %}
+        <img src="{{ movie.poster_url }}"
+             alt="{{ movie.title }} poster"
+             class="movie-poster-large"
+             loading="eager">
+        {% endif %}
+
+        <div class="movie-detail-info">
+            <h1>{{ movie.title }}{% if movie.year %} ({{ movie.year }}){% endif %}</h1>
+
+            <div class="movie-meta">
+                {% if movie.year %}<span>{{ movie.year }}</span>{% endif %}
+                {% if movie.runtime_minutes %}<span>{{ movie.runtime_minutes }} min</span>{% endif %}
+                {% if movie.rating %}<span class="rating">IMDb {{ movie.rating }}</span>{% endif %}
+            </div>
+
+            <div class="movie-genres">
+                {% for genre in movie.genres %}
+                <a href="/browse?genre={{ genre | urlencode }}" class="genre-tag">{{ genre }}</a>
+                {% endfor %}
+            </div>
+
+            {% if movie.director %}
+            <p class="director">Directed by <strong>{{ movie.director }}</strong></p>
+            {% endif %}
+
+            {% if movie.synopsis %}
+            <p class="synopsis">{{ movie.synopsis }}</p>
+            {% endif %}
+
+            {% if movie.cast %}
+            <div class="cast">
+                <h3>Cast</h3>
+                <p>{{ movie.cast | join(', ') }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Streaming Services -->
+            {% if movie.source_urls %}
+            <div class="streaming-services">
+                <h3>Watch Free On</h3>
+                <div class="service-buttons">
+                    {% for url in movie.source_urls %}
+                    <a href="{{ url }}" target="_blank" rel="noopener" class="watch-btn">
+                        {% if 'jiohotstar' in url or 'hotstar' in url %}JioHotstar
+                        {% elif 'mxplayer' in url %}MX Player
+                        {% elif 'zee5' in url %}Zee5
+                        {% elif 'plex' in url %}Plex
+                        {% elif 'youtube' in url %}YouTube
+                        {% elif 'archive.org' in url %}Internet Archive
+                        {% else %}Watch Now
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Related Movies -->
+    {% if related_movies %}
+    <section class="related-movies">
+        <h2>You Might Also Like</h2>
+        <div class="movies-grid">
+            {% for movie in related_movies %}
+            {% include "components/movie_card.html" %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</article>
+{% endblock %}

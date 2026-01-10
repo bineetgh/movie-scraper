@@ -12,7 +12,9 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import Response
 
 
 def load_env_file():
@@ -40,6 +42,7 @@ CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "21600"))  # Default: 6 h
 from models.movie import Movie
 from scrapers.justwatch import JustWatchScraper
 from scrapers.fallback import InternetArchiveScraper
+from utils.slug import generate_movie_slug, parse_movie_slug
 
 
 app = FastAPI(
@@ -52,6 +55,13 @@ app = FastAPI(
 STATIC_DIR = Path(__file__).parent / "static"
 CACHE_DIR = Path(__file__).parent / "cache"
 CACHE_FILE = CACHE_DIR / "movies.json"
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+# Base URL for canonical URLs (set via environment variable in production)
+BASE_URL = os.getenv("BASE_URL", "https://watchlazy.com")
+
+# Jinja2 templates for SSR
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -228,6 +238,55 @@ def search_cached_movies(query: str, movies: List[Movie]) -> List[Movie]:
     return [m for m, s in scored_results]
 
 
+# --- Helper Functions for SSR ---
+
+def find_movie_by_slug(movies: List[Movie], slug: str) -> Optional[Movie]:
+    """Find a movie by its URL slug."""
+    slug_title, slug_year = parse_movie_slug(slug)
+
+    for movie in movies:
+        if movie.slug == slug:
+            return movie
+        # Fallback: match by title portion if exact slug fails
+        if generate_movie_slug(movie.title) == slug_title:
+            if slug_year is None or movie.year == slug_year:
+                return movie
+    return None
+
+
+def get_related_movies(movies: List[Movie], target: Movie, limit: int = 6) -> List[Movie]:
+    """Get related movies based on genre similarity."""
+    target_genres = set(target.genres)
+    scored = []
+
+    for movie in movies:
+        if movie.slug == target.slug:
+            continue
+        overlap = len(target_genres & set(movie.genres))
+        if overlap > 0:
+            scored.append((movie, overlap, movie.rating or 0))
+
+    # Sort by genre overlap, then rating
+    scored.sort(key=lambda x: (x[1], x[2]), reverse=True)
+    return [m for m, _, _ in scored[:limit]]
+
+
+def get_all_genres(movies: List[Movie]) -> List[str]:
+    """Get sorted list of all unique genres."""
+    genres = set()
+    for movie in movies:
+        genres.update(movie.genres)
+    return sorted(genres)
+
+
+def get_all_services(movies: List[Movie]) -> List[str]:
+    """Get sorted list of all unique streaming services."""
+    services = set()
+    for movie in movies:
+        services.update(movie.streaming_services)
+    return sorted(services)
+
+
 def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) -> List[Movie]:
     """
     Deduplicate movies from cache and online sources.
@@ -250,29 +309,192 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
     return list(seen.values())
 
 
-# --- API Endpoints ---
+# --- SSR Routes ---
 
 @app.get("/")
-def root():
-    """Serve the web frontend."""
-    index_file = STATIC_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(str(index_file))
-    return {
-        "message": "Free Movies India API",
-        "endpoints": {
-            "/movies": "Get all free movies",
-            "/movies/search": "Search movies by title",
-            "/movies/random": "Get random movie recommendations",
-            "/movies/top": "Get top-rated movies by IMDb score",
-            "/movies/services": "List available streaming services",
-            "/refresh": "Force refresh movie cache",
-        }
-    }
+def home(request: Request):
+    """SSR home page with top-rated movies."""
+    movies = get_cached_movies()
 
+    # Get top-rated movies
+    top_movies = sorted(
+        [m for m in movies if m.rating],
+        key=lambda m: m.rating or 0,
+        reverse=True
+    )[:24]
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "movies": top_movies,
+        "base_url": BASE_URL,
+        "page_title": "Watchlazy - Free Movies, Zero Effort",
+        "page_description": "Discover and watch free movies on JioHotstar, MX Player, Zee5, Plex and more. No subscriptions needed.",
+        "canonical_path": "/",
+        "active_tab": "home",
+    })
+
+
+@app.get("/movie/{slug}")
+def movie_detail(request: Request, slug: str):
+    """SSR individual movie page."""
+    movies = get_cached_movies()
+    movie = find_movie_by_slug(movies, slug)
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    # Get related movies
+    related = get_related_movies(movies, movie, limit=6)
+
+    return templates.TemplateResponse("movie_detail.html", {
+        "request": request,
+        "movie": movie,
+        "related_movies": related,
+        "base_url": BASE_URL,
+        "page_title": f"{movie.title} ({movie.year}) - Watch Free on Watchlazy" if movie.year else f"{movie.title} - Watch Free on Watchlazy",
+        "page_description": movie.synopsis[:160] if movie.synopsis else f"Watch {movie.title} for free on streaming platforms.",
+        "canonical_path": movie.canonical_url,
+        "og_type": "video.movie",
+        "og_image": movie.poster_url,
+        "active_tab": None,
+    })
+
+
+@app.get("/browse")
+def browse(
+    request: Request,
+    genre: Optional[str] = Query(None),
+    service: Optional[str] = Query(None),
+    min_rating: float = Query(0, ge=0, le=10),
+    page: int = Query(1, ge=1),
+):
+    """SSR browse page with filters and pagination."""
+    movies = get_cached_movies()
+    per_page = 24
+
+    # Apply filters
+    filtered = movies
+    if genre:
+        filtered = [m for m in filtered if genre in m.genres]
+    if service:
+        filtered = [m for m in filtered if service in m.streaming_services]
+    if min_rating > 0:
+        filtered = [m for m in filtered if m.rating and m.rating >= min_rating]
+
+    # Sort by rating
+    filtered = sorted(filtered, key=lambda m: m.rating or 0, reverse=True)
+
+    # Pagination
+    total = len(filtered)
+    total_pages = (total + per_page - 1) // per_page
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated = filtered[start:end]
+
+    # Build page description
+    desc_parts = ["Browse free movies"]
+    if genre:
+        desc_parts = [f"Browse free {genre} movies"]
+    if service:
+        desc_parts.append(f"on {service}")
+    page_desc = " ".join(desc_parts) + " on Watchlazy."
+
+    return templates.TemplateResponse("browse.html", {
+        "request": request,
+        "movies": paginated,
+        "genres": get_all_genres(movies),
+        "services": get_all_services(movies),
+        "current_genre": genre,
+        "current_service": service,
+        "min_rating": min_rating,
+        "page": page,
+        "total_pages": total_pages,
+        "total_movies": total,
+        "base_url": BASE_URL,
+        "page_title": f"Browse {'Genre: ' + genre if genre else 'All'} Free Movies - Watchlazy",
+        "page_description": page_desc,
+        "canonical_path": "/browse",
+        "active_tab": "browse",
+    })
+
+
+@app.get("/search")
+def search_page(request: Request, q: str = Query("")):
+    """SSR search results page."""
+    movies = get_cached_movies()
+    results = search_cached_movies(q, movies) if q else []
+
+    return templates.TemplateResponse("search_results.html", {
+        "request": request,
+        "query": q,
+        "results": results[:50],  # Limit to 50 results
+        "base_url": BASE_URL,
+        "page_title": f"Search: {q} - Watchlazy" if q else "Search Movies - Watchlazy",
+        "page_description": f"Search results for '{q}' on Watchlazy." if q else "Search for free movies on Watchlazy.",
+        "canonical_path": f"/search?q={q}" if q else "/search",
+        "active_tab": None,
+    })
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    """Generate dynamic XML sitemap for SEO."""
+    from datetime import datetime
+    movies = get_cached_movies()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    xml_content = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml_content += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+
+    # Static pages
+    static_pages = [
+        ("/", "1.0", "daily"),
+        ("/browse", "0.9", "daily"),
+    ]
+
+    for path, priority, freq in static_pages:
+        xml_content += f"""  <url>
+    <loc>{BASE_URL}{path}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>{freq}</changefreq>
+    <priority>{priority}</priority>
+  </url>\n"""
+
+    # Movie pages
+    for movie in movies:
+        xml_content += f"""  <url>
+    <loc>{BASE_URL}{movie.canonical_url}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>\n"""
+
+    xml_content += '</urlset>'
+
+    return Response(content=xml_content, media_type="application/xml")
+
+
+@app.get("/robots.txt")
+def robots():
+    """Serve robots.txt with sitemap reference."""
+    content = f"""User-agent: *
+Allow: /
+
+Sitemap: {BASE_URL}/sitemap.xml
+
+# Disallow API endpoints for crawlers
+Disallow: /movies
+Disallow: /refresh
+Disallow: /health
+Disallow: /api
+"""
+    return Response(content=content, media_type="text/plain")
+
+
+# --- API Endpoints ---
 
 @app.get("/api")
-def api_info():
+def api_root():
     """API info - returns available endpoints."""
     return {
         "message": "Free Movies India API",

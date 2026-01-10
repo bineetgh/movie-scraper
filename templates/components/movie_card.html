@@ -1,0 +1,33 @@
+<article class="movie-card" itemscope itemtype="https://schema.org/Movie">
+    <a href="{{ movie.canonical_url }}">
+        <div class="poster-container">
+            {% if movie.poster_url %}
+            <img src="{{ movie.poster_url }}"
+                 alt="{{ movie.title }} poster"
+                 itemprop="image"
+                 loading="lazy"
+                 class="movie-poster">
+            {% else %}
+            <div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">
+                🎬
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="movie-info">
+            <h3 class="movie-title" itemprop="name">{{ movie.title }}</h3>
+            <div class="movie-meta">
+                {% if movie.year %}<span itemprop="datePublished">{{ movie.year }}</span>{% endif %}
+                {% if movie.rating %}<span class="movie-rating" itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating"><span itemprop="ratingValue">{{ movie.rating }}</span> IMDb</span>{% endif %}
+            </div>
+            {% if movie.synopsis %}
+            <p class="movie-synopsis" itemprop="description">{{ movie.synopsis[:150] }}{% if movie.synopsis | length > 150 %}...{% endif %}</p>
+            {% endif %}
+            <div class="movie-services">
+                {% for service in movie.streaming_services[:3] %}
+                <span class="service-tag">{{ service }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </a>
+</article>
