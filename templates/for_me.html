@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Personalized Movie Recommendations - Watchlazy",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/for-me"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- Pass all movies data to JavaScript FIRST -->
+<script>
+    window.allMoviesData = {{ movies_json | safe }};
+</script>
+
+<section>
+    <div class="for-me-header">
+        <h1>For Me</h1>
+        <p>Personalized recommendations based on your watch history and ratings</p>
+    </div>
+
+    <!-- This container will be populated by JavaScript based on localStorage data -->
+    <div id="forMeContent">
+        <noscript>
+            <div class="no-preferences">
+                <div class="no-preferences-icon">🎬</div>
+                <h3>JavaScript Required</h3>
+                <p>Please enable JavaScript to see personalized recommendations.</p>
+                <a href="/browse" class="start-exploring-btn">Browse All Movies</a>
+            </div>
+        </noscript>
+        <div class="loading" id="forMeLoading">Loading your recommendations...</div>
+    </div>
+</section>
+{% endblock %}

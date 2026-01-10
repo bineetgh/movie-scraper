@@ -625,3 +625,256 @@ footer a {
         font-size: 0.8rem;
     }
 }
+
+/* ========== Watched & Reactions ========== */
+
+/* Watched Badge */
+.watched-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 165, 2, 0.95);
+    color: var(--bg-dark);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    z-index: 10;
+}
+
+.movie-card.watched .movie-poster {
+    opacity: 0.6;
+}
+
+.movie-card.watched .watched-badge {
+    display: block !important;
+}
+
+/* Actions Bar */
+.movie-actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.2);
+}
+
+/* Watched Button */
+.watched-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--bg-elevated);
+    border: 2px solid transparent;
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.watched-btn:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.watched-btn.active {
+    background: rgba(255, 165, 2, 0.2);
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+
+.watched-icon {
+    font-size: 1rem;
+}
+
+/* Reaction Buttons */
+.reaction-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.reaction-btn {
+    background: var(--bg-elevated);
+    border: 2px solid transparent;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reaction-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+.reaction-btn.active {
+    opacity: 1;
+    border-color: var(--primary);
+    background: rgba(255, 71, 87, 0.2);
+}
+
+.reaction-btn[data-reaction="loved"].active {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.2);
+}
+
+.reaction-btn[data-reaction="liked"].active {
+    border-color: #27ae60;
+    background: rgba(39, 174, 96, 0.2);
+}
+
+.reaction-btn[data-reaction="disliked"].active {
+    border-color: #95a5a6;
+    background: rgba(149, 165, 166, 0.2);
+}
+
+/* ========== For Me Page ========== */
+
+.for-me-header {
+    text-align: center;
+    padding: 30px 20px;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, rgba(155,89,182,0.15) 0%, rgba(52,152,219,0.15) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.for-me-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #9b59b6, #3498db);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.for-me-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.preference-summary {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.pref-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-surface);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+
+.pref-item .count {
+    background: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.no-preferences {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.no-preferences-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.6;
+}
+
+.no-preferences h3 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: var(--text);
+}
+
+.no-preferences p {
+    color: var(--text-muted);
+    max-width: 400px;
+    margin: 0 auto 25px;
+    line-height: 1.6;
+}
+
+.start-exploring-btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: var(--gradient);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.start-exploring-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgba(255, 71, 87, 0.4);
+}
+
+/* Recommendation Section */
+.rec-section {
+    margin-bottom: 40px;
+}
+
+.rec-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.rec-section-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.rec-section-header .reason {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+/* For Me Tab Style */
+.tab.for-me-tab {
+    background: linear-gradient(135deg, #9b59b6 0%, #3498db 100%);
+    border-color: transparent;
+    color: white;
+}
+
+.tab.for-me-tab:hover {
+    box-shadow: 0 5px 20px rgba(155, 89, 182, 0.4);
+}
+
+/* Toast variants */
+.toast.success {
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+}
+
+.toast.removed {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+}

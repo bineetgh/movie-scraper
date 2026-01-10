@@ -1,4 +1,4 @@
-<article class="movie-card" itemscope itemtype="https://schema.org/Movie">
+<article class="movie-card" itemscope itemtype="https://schema.org/Movie" data-movie-slug="{{ movie.slug }}" data-genres="{{ movie.genres | join(',') }}">
     <a href="{{ movie.canonical_url }}">
         <div class="poster-container">
             {% if movie.poster_url %}
@@ -12,6 +12,7 @@
                 🎬
             </div>
             {% endif %}
+            <span class="watched-badge" style="display: none;">Watched</span>
         </div>
 
         <div class="movie-info">
@@ -30,4 +31,17 @@
             </div>
         </div>
     </a>
+
+    <!-- User Actions (watched, reactions) -->
+    <div class="movie-actions-bar">
+        <button class="watched-btn" onclick="event.preventDefault(); toggleWatched('{{ movie.slug }}')" title="Mark as watched">
+            <span class="watched-icon">👁</span>
+            <span class="watched-text">Watched</span>
+        </button>
+        <div class="reaction-btns">
+            <button class="reaction-btn" data-reaction="loved" onclick="event.preventDefault(); setReaction('{{ movie.slug }}', 'loved')" title="Loved it">😍</button>
+            <button class="reaction-btn" data-reaction="liked" onclick="event.preventDefault(); setReaction('{{ movie.slug }}', 'liked')" title="Liked it">👍</button>
+            <button class="reaction-btn" data-reaction="disliked" onclick="event.preventDefault(); setReaction('{{ movie.slug }}', 'disliked')" title="Didn't like it">👎</button>
+        </div>
+    </div>
 </article>

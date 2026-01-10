@@ -436,6 +436,40 @@ def search_page(request: Request, q: str = Query("")):
     })
 
 
+@app.get("/for-me")
+def for_me_page(request: Request):
+    """SSR personalized recommendations page."""
+    movies = get_cached_movies()
+
+    # Prepare movies data for JavaScript (client-side recommendation engine)
+    movies_data = [
+        {
+            "slug": m.slug,
+            "title": m.title,
+            "year": m.year,
+            "genres": m.genres,
+            "rating": m.rating,
+            "synopsis": m.synopsis[:200] if m.synopsis else "",
+            "poster_url": m.poster_url,
+            "streaming_services": m.streaming_services,
+        }
+        for m in movies
+    ]
+
+    import json
+    movies_json = json.dumps(movies_data)
+
+    return templates.TemplateResponse("for_me.html", {
+        "request": request,
+        "movies_json": movies_json,
+        "base_url": BASE_URL,
+        "page_title": "For Me - Personalized Recommendations - Watchlazy",
+        "page_description": "Get personalized movie recommendations based on your watch history and preferences.",
+        "canonical_path": "/for-me",
+        "active_tab": "for-me",
+    })
+
+
 @app.get("/sitemap.xml")
 def sitemap():
     """Generate dynamic XML sitemap for SEO."""
@@ -450,6 +484,7 @@ def sitemap():
     static_pages = [
         ("/", "1.0", "daily"),
         ("/browse", "0.9", "daily"),
+        ("/for-me", "0.8", "daily"),
     ]
 
     for path, priority, freq in static_pages:

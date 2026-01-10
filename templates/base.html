@@ -66,6 +66,7 @@
         </header>
 
         <nav class="tabs">
+            <a href="/for-me" class="tab for-me-tab {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
             <a href="/" class="tab {{ 'active' if active_tab == 'home' else '' }}">Top Rated</a>
             <a href="/browse" class="tab {{ 'active' if active_tab == 'browse' else '' }}">Browse All</a>
         </nav>
@@ -81,7 +82,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <script src="/static/js/app.js" defer></script>
+    <script src="/static/js/app.js"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
