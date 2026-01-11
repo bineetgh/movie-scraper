@@ -918,3 +918,179 @@ footer a {
 .toast.removed {
     background: linear-gradient(90deg, #e74c3c, #c0392b);
 }
+
+/* ========== Streaming Availability ========== */
+
+.streaming-availability {
+    margin-top: 25px;
+}
+
+.streaming-availability h3 {
+    font-size: 1rem;
+    margin-bottom: 15px;
+    color: var(--text);
+}
+
+.offer-section {
+    margin-bottom: 20px;
+}
+
+.offer-section h4 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.offer-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.offer-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 20px;
+    min-width: 120px;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.offer-btn .provider {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.offer-btn .type,
+.offer-btn .price {
+    font-size: 0.75rem;
+    margin-top: 4px;
+}
+
+/* Free offers - green */
+.offer-btn-free {
+    background: rgba(39, 174, 96, 0.15);
+    border-color: rgba(39, 174, 96, 0.3);
+}
+
+.offer-btn-free .type {
+    color: #2ecc71;
+}
+
+.offer-btn-free:hover {
+    background: rgba(39, 174, 96, 0.25);
+    border-color: #2ecc71;
+    transform: translateY(-2px);
+}
+
+/* Subscription offers - blue */
+.offer-btn-sub {
+    background: rgba(52, 152, 219, 0.15);
+    border-color: rgba(52, 152, 219, 0.3);
+}
+
+.offer-btn-sub:hover {
+    background: rgba(52, 152, 219, 0.25);
+    border-color: #3498db;
+    transform: translateY(-2px);
+}
+
+/* Rent offers - orange */
+.offer-btn-rent {
+    background: rgba(255, 165, 2, 0.15);
+    border-color: rgba(255, 165, 2, 0.3);
+}
+
+.offer-btn-rent .price {
+    color: var(--secondary);
+    font-weight: 600;
+}
+
+.offer-btn-rent:hover {
+    background: rgba(255, 165, 2, 0.25);
+    border-color: var(--secondary);
+    transform: translateY(-2px);
+}
+
+/* Buy offers - purple */
+.offer-btn-buy {
+    background: rgba(155, 89, 182, 0.15);
+    border-color: rgba(155, 89, 182, 0.3);
+}
+
+.offer-btn-buy .price {
+    color: #9b59b6;
+    font-weight: 600;
+}
+
+.offer-btn-buy:hover {
+    background: rgba(155, 89, 182, 0.25);
+    border-color: #9b59b6;
+    transform: translateY(-2px);
+}
+
+/* Availability badges on movie cards */
+.availability-badges {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-free {
+    background: rgba(39, 174, 96, 0.9);
+    color: white;
+}
+
+.badge-sub {
+    background: rgba(52, 152, 219, 0.9);
+    color: white;
+}
+
+.badge-rent {
+    background: rgba(255, 165, 2, 0.9);
+    color: var(--bg-dark);
+}
+
+.badge-buy {
+    background: rgba(155, 89, 182, 0.9);
+    color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .offer-btn {
+        min-width: 100px;
+        padding: 10px 15px;
+    }
+
+    .offer-btn .provider {
+        font-size: 0.8rem;
+    }
+
+    .streaming-availability {
+        text-align: center;
+    }
+
+    .offer-buttons {
+        justify-content: center;
+    }
+}

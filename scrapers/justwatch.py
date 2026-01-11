@@ -1,17 +1,23 @@
+import re
 from typing import Dict, List, Optional
 
 from models.movie import Movie
+from models.offer import StreamingOffer, StreamingAvailability, MonetizationType
 from scrapers.base import BaseScraper
 
 
 class JustWatchScraper(BaseScraper):
-    """Scraper for JustWatch India - aggregates free movies from multiple services."""
+    """Scraper for JustWatch India - aggregates movies from multiple streaming services."""
 
     GRAPHQL_URL = "https://apis.justwatch.com/graphql"
     COUNTRY = "IN"
     LANGUAGE = "en"
 
-    # GraphQL query to fetch free movies
+    # All monetization types
+    ALL_MONETIZATION_TYPES = ["FREE", "ADS", "FLATRATE", "RENT", "BUY"]
+    FREE_MONETIZATION_TYPES = ["FREE", "ADS", "FLATRATE_AND_ADS"]
+
+    # GraphQL query to fetch movies with pricing
     POPULAR_TITLES_QUERY = """
     query GetPopularTitles(
         $country: Country!
@@ -48,6 +54,13 @@ class JustWatchScraper(BaseScraper):
                         }
                         runtime
                         posterUrl
+                        backdrops {
+                            backdropUrl
+                        }
+                        externalIds {
+                            imdbId
+                            tmdbId
+                        }
                         scoring {
                             imdbScore
                         }
@@ -55,8 +68,11 @@ class JustWatchScraper(BaseScraper):
                     offers(country: $country, platform: WEB) {
                         monetizationType
                         presentationType
+                        retailPrice(language: $language)
+                        currency
                         standardWebURL
                         package {
+                            packageId
                             clearName
                         }
                     }
@@ -99,6 +115,13 @@ class JustWatchScraper(BaseScraper):
                         }
                         runtime
                         posterUrl
+                        backdrops {
+                            backdropUrl
+                        }
+                        externalIds {
+                            imdbId
+                            tmdbId
+                        }
                         scoring {
                             imdbScore
                         }
@@ -106,8 +129,11 @@ class JustWatchScraper(BaseScraper):
                     offers(country: $country, platform: WEB) {
                         monetizationType
                         presentationType
+                        retailPrice(language: $language)
+                        currency
                         standardWebURL
                         package {
+                            packageId
                             clearName
                         }
                     }
@@ -125,18 +151,67 @@ class JustWatchScraper(BaseScraper):
         )
         return response.json()
 
+    def _parse_price(self, price_str: Optional[str]) -> Optional[float]:
+        """Parse price string like '₹149' or '149.00' to float."""
+        if not price_str:
+            return None
+        clean = re.sub(r'[^\d.]', '', str(price_str))
+        try:
+            return float(clean) if clean else None
+        except ValueError:
+            return None
+
+    def _parse_offers(self, offers: List[Dict]) -> StreamingAvailability:
+        """Parse JustWatch offers into structured StreamingAvailability."""
+        availability = StreamingAvailability()
+        seen = set()
+
+        for offer in offers or []:
+            provider = offer.get("package", {}).get("clearName", "")
+            if not provider:
+                continue
+
+            monetization = offer.get("monetizationType", "")
+            presentation = offer.get("presentationType", "")
+
+            # Deduplicate by (provider, monetization, presentation)
+            key = (provider, monetization, presentation)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            streaming_offer = StreamingOffer(
+                provider_name=provider,
+                provider_id=str(offer.get("package", {}).get("packageId", "")),
+                monetization_type=monetization,
+                presentation_type=presentation if presentation in ["SD", "HD", "4K"] else None,
+                price=self._parse_price(offer.get("retailPrice")),
+                currency=offer.get("currency", "INR"),
+                url=offer.get("standardWebURL", ""),
+            )
+
+            # Categorize by monetization type
+            if monetization in ("FREE", "ADS", "FLATRATE_AND_ADS"):
+                availability.free_offers.append(streaming_offer)
+            elif monetization == "FLATRATE":
+                availability.subscription_offers.append(streaming_offer)
+            elif monetization == "RENT":
+                availability.rent_offers.append(streaming_offer)
+            elif monetization == "BUY":
+                availability.buy_offers.append(streaming_offer)
+
+        return availability
+
     def _parse_movie(self, node: Dict) -> Optional[Movie]:
         """Parse a movie node from GraphQL response."""
         content = node.get("content", {})
         offers = node.get("offers", []) or []
 
-        # Filter for free offers only
-        free_offers = [
-            o for o in offers
-            if o.get("monetizationType") in ("FREE", "ADS", "FLATRATE_AND_ADS")
-        ]
+        # Parse all offers into structured format
+        streaming = self._parse_offers(offers)
 
-        if not free_offers:
+        # Skip movies with no offers at all
+        if not streaming.has_any_offer():
             return None
 
         # Extract cast and director
@@ -148,14 +223,37 @@ class JustWatchScraper(BaseScraper):
             elif credit.get("role") == "ACTOR":
                 cast.append(credit.get("name"))
 
-        # Extract streaming services and URLs
-        services = list({o.get("package", {}).get("clearName") for o in free_offers if o.get("package")})
-        urls = list({o.get("standardWebURL") for o in free_offers if o.get("standardWebURL")})
+        # Extract streaming services and URLs (for backwards compatibility)
+        all_offers = (streaming.free_offers + streaming.subscription_offers +
+                      streaming.rent_offers + streaming.buy_offers)
+        services = list({o.provider_name for o in all_offers})
+        urls = list({o.url for o in all_offers if o.url})
 
         # Build poster URL
         poster_url = None
         if content.get("posterUrl"):
             poster_url = f"https://images.justwatch.com{content['posterUrl'].replace('{profile}', 's592')}"
+
+        # Build backdrop URL
+        backdrop_url = None
+        backdrops = content.get("backdrops", []) or []
+        if backdrops:
+            backdrop = backdrops[0].get("backdropUrl", "")
+            if backdrop:
+                backdrop_url = f"https://images.justwatch.com{backdrop.replace('{profile}', 's1440')}"
+
+        # Extract external IDs
+        external_ids = content.get("externalIds", {}) or {}
+        tmdb_id = None
+        imdb_id = None
+        if external_ids:
+            tmdb_id_str = external_ids.get("tmdbId")
+            if tmdb_id_str:
+                try:
+                    tmdb_id = int(tmdb_id_str)
+                except (ValueError, TypeError):
+                    pass
+            imdb_id = external_ids.get("imdbId")
 
         return Movie(
             title=content.get("title", ""),
@@ -163,22 +261,40 @@ class JustWatchScraper(BaseScraper):
             genres=[g.get("shortName", "") for g in content.get("genres", []) or []],
             rating=content.get("scoring", {}).get("imdbScore") if content.get("scoring") else None,
             synopsis=content.get("shortDescription", "") or "",
-            cast=cast[:10],  # Limit to top 10 cast
+            cast=cast[:10],
             director=director,
             runtime_minutes=content.get("runtime"),
             poster_url=poster_url,
+            backdrop_url=backdrop_url,
             trailer_url=None,
             streaming_services=services,
             source_urls=urls,
+            tmdb_id=tmdb_id,
+            imdb_id=imdb_id,
+            justwatch_id=node.get("id"),
+            streaming=streaming,
         )
 
-    def fetch_movies(self, limit: Optional[int] = 100) -> List[Movie]:
-        """Fetch free movies from JustWatch India."""
+    def fetch_movies(
+        self,
+        limit: Optional[int] = 100,
+        monetization_types: Optional[List[str]] = None
+    ) -> List[Movie]:
+        """Fetch movies from JustWatch India.
+
+        Args:
+            limit: Maximum number of movies to fetch
+            monetization_types: List of monetization types to include.
+                               Defaults to all types (FREE, ADS, FLATRATE, RENT, BUY)
+        """
+        if monetization_types is None:
+            monetization_types = self.ALL_MONETIZATION_TYPES
+
         movies = []
         cursor = None
-        page_size = min(limit or 100, 50)  # JustWatch limits to ~50 per page
+        page_size = min(limit or 100, 50)
 
-        print(f"Fetching free movies from JustWatch India...")
+        print(f"Fetching movies from JustWatch India (types: {monetization_types})...")
 
         while True:
             variables = {
@@ -188,7 +304,7 @@ class JustWatchScraper(BaseScraper):
                 "after": cursor,
                 "filter": {
                     "objectTypes": ["MOVIE"],
-                    "monetizationTypes": ["FREE", "ADS"],
+                    "monetizationTypes": monetization_types,
                 },
             }
 
@@ -203,7 +319,7 @@ class JustWatchScraper(BaseScraper):
                         movies.append(movie)
 
                     if limit and len(movies) >= limit:
-                        print(f"Fetched {len(movies)} free movies")
+                        print(f"Fetched {len(movies)} movies")
                         return movies
 
                 page_info = titles.get("pageInfo", {})
@@ -217,11 +333,11 @@ class JustWatchScraper(BaseScraper):
                 print(f"Error fetching from JustWatch: {e}")
                 break
 
-        print(f"Fetched {len(movies)} free movies total")
+        print(f"Fetched {len(movies)} movies total")
         return movies
 
     def search(self, query: str) -> List[Movie]:
-        """Search for free movies by title."""
+        """Search for movies by title."""
         variables = {
             "country": self.COUNTRY,
             "language": self.LANGUAGE,

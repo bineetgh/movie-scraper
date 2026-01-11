@@ -88,9 +88,9 @@
 </nav>
 
 <article class="movie-detail">
-    <div class="movie-detail-hero">
-        {% if movie.poster_url %}
-        <img src="{{ movie.poster_url }}"
+    <div class="movie-detail-hero"{% if movie.backdrop_url %} style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('{{ movie.backdrop_url }}'); background-size: cover; background-position: center;"{% endif %}>
+        {% if movie.best_poster_url or movie.poster_url %}
+        <img src="{{ movie.best_poster_url or movie.poster_url }}"
              alt="{{ movie.title }} poster"
              class="movie-poster-large"
              loading="eager">
@@ -126,26 +126,83 @@
             </div>
             {% endif %}
 
-            <!-- Streaming Services -->
-            {% if movie.source_urls %}
-            <div class="streaming-services">
-                <h3>Watch Free On</h3>
-                <div class="service-buttons">
-                    {% for url in movie.source_urls %}
-                    <a href="{{ url }}" target="_blank" rel="noopener" class="watch-btn">
-                        {% if 'jiohotstar' in url or 'hotstar' in url %}JioHotstar
-                        {% elif 'mxplayer' in url %}MX Player
-                        {% elif 'zee5' in url %}Zee5
-                        {% elif 'plex' in url %}Plex
-                        {% elif 'youtube' in url %}YouTube
-                        {% elif 'archive.org' in url %}Internet Archive
-                        {% else %}Watch Now
-                        {% endif %}
-                    </a>
-                    {% endfor %}
+            <!-- Streaming Availability -->
+            <div class="streaming-availability">
+                <h3>Where to Watch</h3>
+
+                {% if movie.streaming.free_offers %}
+                <div class="offer-section offer-free">
+                    <h4>Watch Free</h4>
+                    <div class="offer-buttons">
+                        {% for offer in movie.streaming.free_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-free">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                            <span class="type">{{ 'With Ads' if offer.monetization_type == 'ADS' else 'Free' }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
+                {% endif %}
+
+                {% if movie.streaming.subscription_offers %}
+                <div class="offer-section offer-subscription">
+                    <h4>Subscription</h4>
+                    <div class="offer-buttons">
+                        {% for offer in movie.streaming.subscription_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-sub">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if movie.streaming.rent_offers %}
+                <div class="offer-section offer-rent">
+                    <h4>Rent</h4>
+                    <div class="offer-buttons">
+                        {% for offer in movie.streaming.rent_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-rent">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                            {% if offer.price %}
+                            <span class="price">Rs.{{ offer.price | int }}{% if offer.presentation_type %} {{ offer.presentation_type }}{% endif %}</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if movie.streaming.buy_offers %}
+                <div class="offer-section offer-buy">
+                    <h4>Buy</h4>
+                    <div class="offer-buttons">
+                        {% for offer in movie.streaming.buy_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-buy">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                            {% if offer.price %}
+                            <span class="price">Rs.{{ offer.price | int }}{% if offer.presentation_type %} {{ offer.presentation_type }}{% endif %}</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not movie.streaming.free_offers and not movie.streaming.subscription_offers and not movie.streaming.rent_offers and not movie.streaming.buy_offers %}
+                {% if movie.source_urls %}
+                <div class="offer-section">
+                    <div class="offer-buttons">
+                        {% for url in movie.source_urls %}
+                        <a href="{{ url }}" target="_blank" rel="noopener" class="offer-btn">
+                            {% if 'archive.org' in url %}Internet Archive{% else %}Watch Now{% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 

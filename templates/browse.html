@@ -29,6 +29,14 @@
 
     <!-- Filters -->
     <form action="/browse" method="get" class="filters">
+        <select name="availability" onchange="this.form.submit()">
+            <option value="all" {{ 'selected' if current_availability == 'all' else '' }}>All Availability</option>
+            <option value="free" {{ 'selected' if current_availability == 'free' else '' }}>Free Only</option>
+            <option value="subscription" {{ 'selected' if current_availability == 'subscription' else '' }}>Subscription</option>
+            <option value="rent" {{ 'selected' if current_availability == 'rent' else '' }}>Rent</option>
+            <option value="buy" {{ 'selected' if current_availability == 'buy' else '' }}>Buy</option>
+        </select>
+
         <select name="genre" onchange="this.form.submit()">
             <option value="">All Genres</option>
             {% for genre in genres %}
@@ -49,6 +57,24 @@
             <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
             <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
         </select>
+
+        {% if current_availability == 'rent' %}
+        <select name="max_rent_price" onchange="this.form.submit()">
+            <option value="">Any Rent Price</option>
+            <option value="99" {{ 'selected' if max_rent_price == 99 else '' }}>Under Rs.99</option>
+            <option value="199" {{ 'selected' if max_rent_price == 199 else '' }}>Under Rs.199</option>
+            <option value="299" {{ 'selected' if max_rent_price == 299 else '' }}>Under Rs.299</option>
+        </select>
+        {% endif %}
+
+        {% if current_availability == 'buy' %}
+        <select name="max_buy_price" onchange="this.form.submit()">
+            <option value="">Any Buy Price</option>
+            <option value="299" {{ 'selected' if max_buy_price == 299 else '' }}>Under Rs.299</option>
+            <option value="499" {{ 'selected' if max_buy_price == 499 else '' }}>Under Rs.499</option>
+            <option value="799" {{ 'selected' if max_buy_price == 799 else '' }}>Under Rs.799</option>
+        </select>
+        {% endif %}
     </form>
 
     <div class="movies-grid">
@@ -67,9 +93,17 @@
 
     <!-- Pagination -->
     {% if total_pages > 1 %}
+    {% set filter_params = '' %}
+    {% if current_availability and current_availability != 'all' %}{% set filter_params = filter_params + '&availability=' + current_availability %}{% endif %}
+    {% if current_genre %}{% set filter_params = filter_params + '&genre=' + current_genre %}{% endif %}
+    {% if current_service %}{% set filter_params = filter_params + '&service=' + current_service %}{% endif %}
+    {% if min_rating %}{% set filter_params = filter_params + '&min_rating=' + min_rating|string %}{% endif %}
+    {% if max_rent_price %}{% set filter_params = filter_params + '&max_rent_price=' + max_rent_price|string %}{% endif %}
+    {% if max_buy_price %}{% set filter_params = filter_params + '&max_buy_price=' + max_buy_price|string %}{% endif %}
+
     <nav class="pagination" aria-label="Pagination">
         {% if page > 1 %}
-        <a href="/browse?page={{ page - 1 }}{% if current_genre %}&genre={{ current_genre }}{% endif %}{% if current_service %}&service={{ current_service }}{% endif %}{% if min_rating %}&min_rating={{ min_rating }}{% endif %}">&laquo; Prev</a>
+        <a href="/browse?page={{ page - 1 }}{{ filter_params }}">&laquo; Prev</a>
         {% else %}
         <span class="disabled">&laquo; Prev</span>
         {% endif %}
@@ -78,7 +112,7 @@
             {% if p == page %}
             <span class="current">{{ p }}</span>
             {% elif p <= 3 or p > total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
-            <a href="/browse?page={{ p }}{% if current_genre %}&genre={{ current_genre }}{% endif %}{% if current_service %}&service={{ current_service }}{% endif %}{% if min_rating %}&min_rating={{ min_rating }}{% endif %}">{{ p }}</a>
+            <a href="/browse?page={{ p }}{{ filter_params }}">{{ p }}</a>
             {% elif p == 4 and page > 5 %}
             <span>...</span>
             {% elif p == total_pages - 2 and page < total_pages - 4 %}
@@ -87,7 +121,7 @@
         {% endfor %}
 
         {% if page < total_pages %}
-        <a href="/browse?page={{ page + 1 }}{% if current_genre %}&genre={{ current_genre }}{% endif %}{% if current_service %}&service={{ current_service }}{% endif %}{% if min_rating %}&min_rating={{ min_rating }}{% endif %}">Next &raquo;</a>
+        <a href="/browse?page={{ page + 1 }}{{ filter_params }}">Next &raquo;</a>
         {% else %}
         <span class="disabled">Next &raquo;</span>
         {% endif %}
