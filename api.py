@@ -59,7 +59,7 @@ from scrapers.tmdb import TMDBClient
 from utils.slug import generate_movie_slug, parse_movie_slug
 from db.mongodb import get_database, close_connection, init_indexes, check_connection
 from db.movie_repository import MovieRepository
-from cache.memory_cache import memory_cache
+from cache import init_cache, close_cache, get_cache, get_cache_backend_name
 
 # Global repository instance (set during startup)
 movie_repo: Optional[MovieRepository] = None
@@ -67,8 +67,9 @@ movie_repo: Optional[MovieRepository] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifecycle - connect to MongoDB on startup."""
+    """Manage application lifecycle - connect to MongoDB and cache on startup."""
     global movie_repo
+    # Initialize MongoDB
     db = await get_database()
     if db is not None:
         movie_repo = MovieRepository(db)
@@ -76,7 +77,10 @@ async def lifespan(app: FastAPI):
         logger.info("MongoDB repository initialized")
     else:
         logger.warning("Running without MongoDB - using JSON file cache only")
+    # Initialize cache (Redis if REDIS_URL set, otherwise in-memory)
+    await init_cache()
     yield
+    await close_cache()
     await close_connection()
 
 
@@ -242,9 +246,9 @@ async def sync_movies_to_mongodb(movies: List[Movie]):
             # Invalidate metadata cache
             global _cache_timestamp
             _cache_timestamp = 0
-            # Invalidate memory cache
-            await memory_cache.invalidate_all()
-            logger.info("Memory cache invalidated after sync")
+            # Invalidate cache (Redis or memory)
+            await get_cache().invalidate_all()
+            logger.info(f"Cache invalidated after sync (backend: {get_cache_backend_name()})")
         except Exception as e:
             logger.error(f"Failed to sync to MongoDB: {e}")
 
@@ -423,8 +427,9 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
 @app.get("/")
 async def home(request: Request):
     """SSR home page with top-rated movies."""
-    # Try memory cache first
-    top_movies = await memory_cache.get_top_rated(24)
+    cache_mgr = get_cache()
+    # Try cache first (Redis or memory)
+    top_movies = await cache_mgr.get_top_rated(24)
 
     if top_movies is None:
         # Cache miss - try MongoDB
@@ -432,7 +437,7 @@ async def home(request: Request):
             try:
                 top_movies = await movie_repo.get_top_rated(limit=24)
                 if top_movies:
-                    await memory_cache.set_top_rated(24, top_movies)
+                    await cache_mgr.set_top_rated(24, top_movies)
             except Exception as e:
                 logger.error(f"MongoDB query failed: {e}")
                 top_movies = []
@@ -460,8 +465,9 @@ async def home(request: Request):
 @app.get("/movie/{slug}")
 async def movie_detail(request: Request, slug: str):
     """SSR individual movie page."""
-    # Try memory cache first
-    cached = await memory_cache.get_movie_with_related(slug)
+    cache_mgr = get_cache()
+    # Try cache first (Redis or memory)
+    cached = await cache_mgr.get_movie_with_related(slug)
 
     if cached is not None:
         movie, related = cached
@@ -474,7 +480,7 @@ async def movie_detail(request: Request, slug: str):
             try:
                 movie, related = await movie_repo.get_movie_with_related(slug, related_limit=6)
                 if movie is not None:
-                    await memory_cache.set_movie_with_related(slug, movie, related)
+                    await cache_mgr.set_movie_with_related(slug, movie, related)
             except Exception as e:
                 logger.error(f"MongoDB query failed: {e}")
 
@@ -525,9 +531,10 @@ async def browse(
     avail_filter = None if availability == "all" else availability
     min_rating_filter = min_rating if min_rating > 0 else None
     use_fallback = True
+    cache_mgr = get_cache()
 
-    # Try memory cache first
-    cached_browse = await memory_cache.get_browse(
+    # Try cache first (Redis or memory)
+    cached_browse = await cache_mgr.get_browse(
         genre, service, avail_filter, min_rating_filter, page
     )
 
@@ -560,7 +567,7 @@ async def browse(
             use_fallback = False
             # Cache the browse results
             if paginated:
-                await memory_cache.set_browse(
+                await cache_mgr.set_browse(
                     genre, service, avail_filter, min_rating_filter, page,
                     paginated, total
                 )
@@ -647,10 +654,11 @@ async def browse(
 async def search_page(request: Request, q: str = Query("")):
     """SSR search results page."""
     results = []
+    cache_mgr = get_cache()
 
     if q:
-        # Try memory cache first
-        results = await memory_cache.get_search(q)
+        # Try cache first (Redis or memory)
+        results = await cache_mgr.get_search(q)
 
         if results is None:
             results = []
@@ -659,7 +667,7 @@ async def search_page(request: Request, q: str = Query("")):
                 try:
                     results = await movie_repo.search(q, limit=50)
                     if results:
-                        await memory_cache.set_search(q, results)
+                        await cache_mgr.set_search(q, results)
                 except Exception as e:
                     logger.error(f"MongoDB search failed: {e}")
 
@@ -1093,13 +1101,26 @@ async def health_check():
         except Exception:
             pass
 
+    # Get cache stats (works for both Redis and memory cache)
+    cache_mgr = get_cache()
+    cache_backend = get_cache_backend_name()
+
+    # Handle async get_stats for Redis, sync for memory
+    if hasattr(cache_mgr, 'get_stats'):
+        cache_stats = cache_mgr.get_stats()
+        if asyncio.iscoroutine(cache_stats):
+            cache_stats = await cache_stats
+    else:
+        cache_stats = {}
+
     return {
         "status": "healthy",
         "cache_size": len(cache.get_movies()),
         "cache_stale": cache.is_stale(),
         "mongodb_connected": mongodb_connected,
         "mongodb_count": mongodb_count,
-        "memory_cache": memory_cache.get_stats(),
+        "cache_backend": cache_backend,
+        "cache_stats": cache_stats,
     }
 
 
