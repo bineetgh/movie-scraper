@@ -760,6 +760,13 @@ async def sitemap():
     return Response(content=xml_content, media_type="application/xml")
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Redirect favicon.ico to SVG favicon."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/static/favicon.svg", status_code=301)
+
+
 @app.get("/robots.txt")
 def robots():
     """Serve robots.txt with sitemap reference."""
