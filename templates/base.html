@@ -102,7 +102,7 @@
                                 <path d="M1 1l4 4 4-4"/>
                             </svg>
                         </span>
-                        <div class="dropdown-menu">
+                        <div class="dropdown-menu dropdown-menu-grid">
                             {% for clist in curated_lists %}
                             <a href="/list/{{ clist.slug }}">{{ clist.label }}</a>
                             {% endfor %}
@@ -113,10 +113,74 @@
 
                 <form action="/search" method="get" class="search-box">
                     <input type="text" name="q" placeholder="Search..." value="{{ query | default('') }}">
-                    <button type="submit">Search</button>
+                    <button type="submit" aria-label="Search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                    </button>
                 </form>
+
+                <button class="hamburger" id="hamburger" aria-label="Menu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
             </div>
         </header>
+
+        <!-- Mobile Navigation Overlay -->
+        <div class="mobile-nav-overlay" id="mobileNav">
+            <button class="close-nav" id="closeNav" aria-label="Close menu">&times;</button>
+            <nav>
+                <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
+                <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Top Rated</a>
+                <div class="nav-dropdown">
+                    <span class="nav-link">
+                        Browse
+                        <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M1 1l4 4 4-4"/>
+                        </svg>
+                    </span>
+                    <div class="dropdown-menu">
+                        <a href="/browse">All Movies</a>
+                        <a href="/browse?availability=free">Free</a>
+                        <a href="/browse?availability=subscription">Subscription</a>
+                        <a href="/browse?availability=rent">Rent</a>
+                        <a href="/browse?availability=buy">Buy</a>
+                    </div>
+                </div>
+                <div class="nav-dropdown">
+                    <span class="nav-link">
+                        Genres
+                        <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M1 1l4 4 4-4"/>
+                        </svg>
+                    </span>
+                    <div class="dropdown-menu">
+                        {% for genre in ['Action', 'Comedy', 'Drama', 'Horror', 'Romance', 'Thriller', 'Sci-Fi', 'Documentary'] %}
+                        <a href="/genre/{{ genre | lower }}">{{ genre }}</a>
+                        {% endfor %}
+                        <a href="/genres" class="see-all">See All Genres</a>
+                    </div>
+                </div>
+                {% if curated_lists %}
+                <div class="nav-dropdown">
+                    <span class="nav-link">
+                        Collections
+                        <svg class="dropdown-arrow" width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+                            <path d="M1 1l4 4 4-4"/>
+                        </svg>
+                    </span>
+                    <div class="dropdown-menu dropdown-menu-grid">
+                        {% for clist in curated_lists %}
+                        <a href="/list/{{ clist.slug }}">{{ clist.label }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </nav>
+        </div>
 
         {% block content %}{% endblock %}
 

@@ -370,10 +370,42 @@
         return html;
     }
 
+    // ========== Mobile Navigation ==========
+    function initMobileNav() {
+        const hamburger = document.getElementById('hamburger');
+        const mobileNav = document.getElementById('mobileNav');
+        const closeNav = document.getElementById('closeNav');
+
+        if (!hamburger || !mobileNav) return;
+
+        hamburger.addEventListener('click', function() {
+            hamburger.classList.toggle('active');
+            mobileNav.classList.toggle('active');
+            document.body.style.overflow = mobileNav.classList.contains('active') ? 'hidden' : '';
+        });
+
+        if (closeNav) {
+            closeNav.addEventListener('click', function() {
+                hamburger.classList.remove('active');
+                mobileNav.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+        }
+
+        // Toggle dropdowns in mobile nav
+        mobileNav.querySelectorAll('.nav-dropdown > .nav-link').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.parentElement.classList.toggle('open');
+            });
+        });
+    }
+
     // ========== Initialize on DOM Ready ==========
     function init() {
         initUserStates();
         initForMePage();
+        initMobileNav();
     }
 
     if (document.readyState === 'loading') {

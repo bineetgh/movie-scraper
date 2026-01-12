@@ -14,18 +14,35 @@
 
 {% block content %}
 <section>
-    <h1 style="font-size: 1.5rem; margin-bottom: 20px; color: var(--text);">
-        {% if current_availability and current_availability != 'all' %}
-        {{ current_availability | capitalize }} Movies
-        {% elif current_service %}
-        Movies on {{ current_service }}
-        {% else %}
-        Browse All Movies
-        {% endif %}
-        <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400; margin-left: 10px;">
-            {{ total_movies }} movies
-        </span>
-    </h1>
+    <!-- Page Header with Title and Filters -->
+    <div class="browse-header">
+        <h1>
+            {% if current_availability and current_availability != 'all' %}
+            {{ current_availability | capitalize }} Movies
+            {% elif current_service %}
+            Movies on {{ current_service }}
+            {% else %}
+            Browse All Movies
+            {% endif %}
+            <span class="movie-count">{{ total_movies }} movies</span>
+        </h1>
+
+        <div class="browse-filters">
+            <select name="service" onchange="window.location.href='/browse?service=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
+                <option value="">All Services</option>
+                {% for service in services %}
+                <option value="{{ service }}" {{ 'selected' if service == current_service else '' }}>{{ service }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="min_rating" onchange="window.location.href='/browse?min_rating=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
+                <option value="0" {{ 'selected' if min_rating == 0 else '' }}>Any Rating</option>
+                <option value="6" {{ 'selected' if min_rating == 6 else '' }}>IMDb 6+</option>
+                <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
+                <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
+            </select>
+        </div>
+    </div>
 
     <!-- Alphabet Filter -->
     <div class="alphabet-filter">
@@ -37,23 +54,6 @@
         {% endfor %}
         <a href="/browse?letter=0-9{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}"
            class="{{ 'active' if current_letter == '0-9' else '' }}">#</a>
-    </div>
-
-    <!-- Quick Filters -->
-    <div class="filters" style="margin-bottom: 20px;">
-        <select name="service" onchange="window.location.href='/browse?service=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
-            <option value="">All Services</option>
-            {% for service in services %}
-            <option value="{{ service }}" {{ 'selected' if service == current_service else '' }}>{{ service }}</option>
-            {% endfor %}
-        </select>
-
-        <select name="min_rating" onchange="window.location.href='/browse?min_rating=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
-            <option value="0" {{ 'selected' if min_rating == 0 else '' }}>Any Rating</option>
-            <option value="6" {{ 'selected' if min_rating == 6 else '' }}>IMDb 6+</option>
-            <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
-            <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
-        </select>
     </div>
 
     <div class="movies-grid">

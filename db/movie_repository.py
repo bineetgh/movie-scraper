@@ -187,12 +187,12 @@ class MovieRepository:
     async def get_all_genres(self) -> List[str]:
         """Get list of all unique genres."""
         genres = await self.movies.distinct("genres")
-        return sorted(genres)
+        return sorted([g for g in genres if g])
 
     async def get_all_services(self) -> List[str]:
         """Get list of all unique streaming services."""
         services = await self.movies.distinct("streaming_providers")
-        return sorted(services)
+        return sorted([s for s in services if s])
 
     async def upsert_movies(self, movies: List[Movie]) -> int:
         """Bulk upsert movies. Returns number of modified documents."""
