@@ -15,9 +15,10 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from fastapi import FastAPI, Query, HTTPException, Request
+from fastapi import FastAPI, Query, HTTPException, Request, Depends, Form
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import Response
+from fastapi.responses import Response, RedirectResponse
+from fastapi.security import APIKeyHeader
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,20 +60,44 @@ from scrapers.tmdb import TMDBClient
 from utils.slug import generate_movie_slug, parse_movie_slug
 from db.mongodb import get_database, close_connection, init_indexes, check_connection
 from db.movie_repository import MovieRepository
+from db.curated_repository import CuratedListRepository
+from models.curated_list import CuratedList
 from cache import init_cache, close_cache, get_cache, get_cache_backend_name
 
-# Global repository instance (set during startup)
+# Admin configuration
+ADMIN_ACCESS_KEY = os.getenv("ADMIN_ACCESS_KEY", "")
+admin_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
+
+# Global repository instances (set during startup)
 movie_repo: Optional[MovieRepository] = None
+curated_repo: Optional[CuratedListRepository] = None
+
+
+def verify_admin_key(request: Request) -> bool:
+    """Verify admin access key from query param or cookie."""
+    key = request.query_params.get("key") or request.cookies.get("admin_key")
+    return key == ADMIN_ACCESS_KEY and ADMIN_ACCESS_KEY != ""
+
+
+async def get_curated_lists_for_menu() -> List[CuratedList]:
+    """Get active curated lists for navigation menu."""
+    if curated_repo is not None:
+        try:
+            return await curated_repo.get_all(active_only=True)
+        except Exception:
+            pass
+    return []
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - connect to MongoDB and cache on startup."""
-    global movie_repo
+    global movie_repo, curated_repo
     # Initialize MongoDB
     db = await get_database()
     if db is not None:
         movie_repo = MovieRepository(db)
+        curated_repo = CuratedListRepository(db)
         await init_indexes(db)
         logger.info("MongoDB repository initialized")
     else:
@@ -428,6 +453,7 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
 async def home(request: Request):
     """SSR home page with top-rated movies."""
     cache_mgr = get_cache()
+    curated_lists = await get_curated_lists_for_menu()
     # Try cache first (Redis or memory)
     top_movies = await cache_mgr.get_top_rated(24)
 
@@ -454,6 +480,7 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {
         "request": request,
         "movies": top_movies,
+        "curated_lists": curated_lists,
         "base_url": BASE_URL,
         "page_title": "Watchlazy - Free Movies, Zero Effort",
         "page_description": "Discover and watch free movies on JioHotstar, MX Player, Zee5, Plex and more. No subscriptions needed.",
@@ -466,6 +493,7 @@ async def home(request: Request):
 async def movie_detail(request: Request, slug: str):
     """SSR individual movie page."""
     cache_mgr = get_cache()
+    curated_lists = await get_curated_lists_for_menu()
     # Try cache first (Redis or memory)
     cached = await cache_mgr.get_movie_with_related(slug)
 
@@ -498,6 +526,7 @@ async def movie_detail(request: Request, slug: str):
         "request": request,
         "movie": movie,
         "related_movies": related,
+        "curated_lists": curated_lists,
         "base_url": BASE_URL,
         "page_title": f"{movie.title} ({movie.year}) - Watch Free on Watchlazy" if movie.year else f"{movie.title} - Watch Free on Watchlazy",
         "page_description": movie.synopsis[:160] if movie.synopsis else f"Watch {movie.title} for free on streaming platforms.",
@@ -511,12 +540,10 @@ async def movie_detail(request: Request, slug: str):
 @app.get("/browse")
 async def browse(
     request: Request,
-    genre: Optional[str] = Query(None),
     service: Optional[str] = Query(None),
     min_rating: float = Query(0, ge=0, le=10),
     availability: str = Query("all"),
-    max_rent_price: Optional[float] = Query(None, ge=0),
-    max_buy_price: Optional[float] = Query(None, ge=0),
+    letter: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
 ):
     """SSR browse page with filters and pagination."""
@@ -524,53 +551,37 @@ async def browse(
     skip = (page - 1) * per_page
     paginated = []
     total = 0
-    genres_list = []
     services_list = []
+    curated_lists = await get_curated_lists_for_menu()
 
     # Map availability to type filter
     avail_filter = None if availability == "all" else availability
     min_rating_filter = min_rating if min_rating > 0 else None
     use_fallback = True
-    cache_mgr = get_cache()
 
-    # Try cache first (Redis or memory)
-    cached_browse = await cache_mgr.get_browse(
-        genre, service, avail_filter, min_rating_filter, page
-    )
-
-    if cached_browse is not None:
-        paginated, total = cached_browse
-        genres_list, services_list = await get_cached_genres_services()
-        use_fallback = False
-    elif movie_repo is not None:
-        # Cache miss - try MongoDB
+    # Get movies from MongoDB or file cache
+    if movie_repo is not None:
         try:
-            # Run all queries in parallel for better performance
-            paginated, total, (genres_list, services_list) = await asyncio.gather(
+            # Build query with letter filter
+            paginated, total, (_, services_list) = await asyncio.gather(
                 movie_repo.get_all(
-                    genre=genre,
                     service=service,
                     availability=avail_filter,
                     min_rating=min_rating_filter,
-                    sort_by="rating",
+                    letter=letter,
+                    sort_by="title" if letter else "rating",
                     skip=skip,
                     limit=per_page,
                 ),
                 movie_repo.count(
-                    genre=genre,
                     service=service,
                     availability=avail_filter,
                     min_rating=min_rating_filter,
+                    letter=letter,
                 ),
                 get_cached_genres_services(),
             )
             use_fallback = False
-            # Cache the browse results
-            if paginated:
-                await cache_mgr.set_browse(
-                    genre, service, avail_filter, min_rating_filter, page,
-                    paginated, total
-                )
         except Exception as e:
             logger.error(f"MongoDB query failed: {e}")
             paginated = []
@@ -581,8 +592,6 @@ async def browse(
 
         # Apply filters
         filtered = movies
-        if genre:
-            filtered = [m for m in filtered if genre in m.genres]
         if service:
             filtered = [m for m in filtered if service in m.streaming_services]
         if min_rating > 0:
@@ -595,19 +604,24 @@ async def browse(
             filtered = [m for m in filtered if m.has_subscription]
         elif availability == "rent":
             filtered = [m for m in filtered if m.is_rentable]
-            if max_rent_price:
-                filtered = [m for m in filtered if m.streaming.min_rent_price and m.streaming.min_rent_price <= max_rent_price]
         elif availability == "buy":
             filtered = [m for m in filtered if m.is_buyable]
-            if max_buy_price:
-                filtered = [m for m in filtered if m.streaming.min_buy_price and m.streaming.min_buy_price <= max_buy_price]
 
-        # Sort by rating
-        filtered = sorted(filtered, key=lambda m: m.rating or 0, reverse=True)
+        # Filter by letter
+        if letter:
+            if letter == "0-9":
+                filtered = [m for m in filtered if m.title and m.title[0].isdigit()]
+            else:
+                filtered = [m for m in filtered if m.title and m.title[0].upper() == letter.upper()]
+
+        # Sort by title if letter filter, otherwise by rating
+        if letter:
+            filtered = sorted(filtered, key=lambda m: m.title.lower())
+        else:
+            filtered = sorted(filtered, key=lambda m: m.rating or 0, reverse=True)
 
         total = len(filtered)
         paginated = filtered[skip:skip + per_page]
-        genres_list = get_all_genres(movies)
         services_list = get_all_services(movies)
 
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
@@ -622,8 +636,8 @@ async def browse(
     }
     avail_label = availability_labels.get(availability, "all")
     desc_parts = [f"Browse {avail_label} movies"]
-    if genre:
-        desc_parts = [f"Browse {avail_label} {genre} movies"]
+    if letter:
+        desc_parts.append(f"starting with {letter}")
     if service:
         desc_parts.append(f"on {service}")
     page_desc = " ".join(desc_parts) + " on Watchlazy."
@@ -631,21 +645,111 @@ async def browse(
     return templates.TemplateResponse("browse.html", {
         "request": request,
         "movies": paginated,
-        "genres": genres_list,
         "services": services_list,
-        "current_genre": genre,
+        "curated_lists": curated_lists,
         "current_service": service,
         "min_rating": min_rating,
         "current_availability": availability,
-        "max_rent_price": max_rent_price,
-        "max_buy_price": max_buy_price,
+        "current_letter": letter,
         "page": page,
         "total_pages": total_pages,
         "total_movies": total,
         "base_url": BASE_URL,
-        "page_title": f"Browse {'Genre: ' + genre if genre else 'All'} Movies - Watchlazy",
+        "page_title": f"Browse {letter + ' ' if letter else ''}Movies - Watchlazy",
         "page_description": page_desc,
         "canonical_path": "/browse",
+        "active_tab": "browse",
+    })
+
+
+@app.get("/genre/{genre_name}")
+async def genre_page(
+    request: Request,
+    genre_name: str,
+    page: int = Query(1, ge=1),
+):
+    """SSR genre page showing movies in a specific genre."""
+    per_page = 24
+    skip = (page - 1) * per_page
+    paginated = []
+    total = 0
+    curated_lists = await get_curated_lists_for_menu()
+
+    # Capitalize genre name for display
+    genre_display = genre_name.replace("-", " ").title()
+    if genre_name.lower() == "sci-fi":
+        genre_display = "Sci-Fi"
+
+    if movie_repo is not None:
+        try:
+            paginated, total = await asyncio.gather(
+                movie_repo.get_all(
+                    genre=genre_display,
+                    sort_by="rating",
+                    skip=skip,
+                    limit=per_page,
+                ),
+                movie_repo.count(genre=genre_display),
+            )
+        except Exception as e:
+            logger.error(f"MongoDB query failed: {e}")
+
+    # Fallback to file cache
+    if not paginated:
+        movies = get_cached_movies()
+        filtered = [m for m in movies if genre_display in m.genres]
+        filtered = sorted(filtered, key=lambda m: m.rating or 0, reverse=True)
+        total = len(filtered)
+        paginated = filtered[skip:skip + per_page]
+
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+
+    return templates.TemplateResponse("genre.html", {
+        "request": request,
+        "movies": paginated,
+        "genre": genre_display,
+        "curated_lists": curated_lists,
+        "page": page,
+        "total_pages": total_pages,
+        "total_movies": total,
+        "base_url": BASE_URL,
+        "page_title": f"{genre_display} Movies - Watchlazy",
+        "page_description": f"Browse {genre_display} movies on Watchlazy. Find free and streaming {genre_display} films.",
+        "canonical_path": f"/genre/{genre_name}",
+        "active_tab": "browse",
+    })
+
+
+@app.get("/genres")
+async def all_genres_page(request: Request):
+    """SSR page showing all genres with movie counts."""
+    genre_counts = {}
+    curated_lists = await get_curated_lists_for_menu()
+
+    if movie_repo is not None:
+        try:
+            genre_counts = await movie_repo.get_genre_counts()
+        except Exception as e:
+            logger.error(f"MongoDB query failed: {e}")
+
+    # Fallback to file cache
+    if not genre_counts:
+        movies = get_cached_movies()
+        for movie in movies:
+            for genre in movie.genres:
+                genre_counts[genre] = genre_counts.get(genre, 0) + 1
+
+    # Sort by count descending
+    sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)
+
+    return templates.TemplateResponse("genres.html", {
+        "request": request,
+        "genres": sorted_genres,
+        "curated_lists": curated_lists,
+        "base_url": BASE_URL,
+        "page_title": "All Genres - Watchlazy",
+        "page_description": "Browse movies by genre on Watchlazy. Find action, comedy, drama, horror and more.",
+        "canonical_path": "/genres",
         "active_tab": "browse",
     })
 
@@ -655,6 +759,7 @@ async def search_page(request: Request, q: str = Query("")):
     """SSR search results page."""
     results = []
     cache_mgr = get_cache()
+    curated_lists = await get_curated_lists_for_menu()
 
     if q:
         # Try cache first (Redis or memory)
@@ -680,6 +785,7 @@ async def search_page(request: Request, q: str = Query("")):
         "request": request,
         "query": q,
         "results": results,
+        "curated_lists": curated_lists,
         "base_url": BASE_URL,
         "page_title": f"Search: {q} - Watchlazy" if q else "Search Movies - Watchlazy",
         "page_description": f"Search results for '{q}' on Watchlazy." if q else "Search for free movies on Watchlazy.",
@@ -692,6 +798,7 @@ async def search_page(request: Request, q: str = Query("")):
 async def for_me_page(request: Request):
     """SSR personalized recommendations page."""
     movies = await get_movies_from_db_or_cache()
+    curated_lists = await get_curated_lists_for_menu()
 
     # Prepare movies data for JavaScript (client-side recommendation engine)
     movies_data = [
@@ -713,6 +820,7 @@ async def for_me_page(request: Request):
     return templates.TemplateResponse("for_me.html", {
         "request": request,
         "movies_json": movies_json,
+        "curated_lists": curated_lists,
         "base_url": BASE_URL,
         "page_title": "For Me - Personalized Recommendations - Watchlazy",
         "page_description": "Get personalized movie recommendations based on your watch history and preferences.",
@@ -1078,11 +1186,387 @@ async def get_movie_by_title(movie_title: str):
     return [m.to_dict() for m in matches]
 
 
+# ========== ADMIN ROUTES ==========
+
+@app.get("/admin")
+async def admin_login_page(request: Request):
+    """Admin login page."""
+    if verify_admin_key(request):
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    return templates.TemplateResponse("admin/login.html", {
+        "request": request,
+        "error": request.query_params.get("error"),
+    })
+
+
+@app.post("/admin/login")
+async def admin_login(request: Request, key: str = Form(...)):
+    """Process admin login."""
+    if key == ADMIN_ACCESS_KEY and ADMIN_ACCESS_KEY != "":
+        response = RedirectResponse(url="/admin/dashboard", status_code=302)
+        response.set_cookie("admin_key", key, httponly=True, max_age=86400)
+        return response
+    return RedirectResponse(url="/admin?error=invalid", status_code=302)
+
+
+@app.get("/admin/logout")
+async def admin_logout():
+    """Admin logout."""
+    response = RedirectResponse(url="/admin", status_code=302)
+    response.delete_cookie("admin_key")
+    return response
+
+
+@app.get("/admin/dashboard")
+async def admin_dashboard(request: Request, page: int = Query(1, ge=1), search: str = Query("")):
+    """Admin dashboard with movies table."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    per_page = 50
+    skip = (page - 1) * per_page
+    movies = []
+    total = 0
+
+    if movie_repo is not None:
+        try:
+            if search:
+                movies = await movie_repo.search(search, limit=per_page)
+                total = len(movies)
+            else:
+                movies, total = await asyncio.gather(
+                    movie_repo.get_all(sort_by="title", skip=skip, limit=per_page),
+                    movie_repo.get_total_count(),
+                )
+        except Exception as e:
+            logger.error(f"Admin dashboard query failed: {e}")
+
+    # Fallback to file cache
+    if not movies and not search:
+        all_movies = get_cached_movies()
+        all_movies = sorted(all_movies, key=lambda m: m.title.lower())
+        total = len(all_movies)
+        movies = all_movies[skip:skip + per_page]
+
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+
+    # Get curated lists for the dropdown
+    curated_lists = []
+    if curated_repo is not None:
+        try:
+            curated_lists = await curated_repo.get_all(active_only=False)
+        except Exception:
+            pass
+
+    return templates.TemplateResponse("admin/dashboard.html", {
+        "request": request,
+        "movies": movies,
+        "curated_lists": curated_lists,
+        "page": page,
+        "total_pages": total_pages,
+        "total_movies": total,
+        "search": search,
+    })
+
+
+@app.get("/admin/movie/{slug}")
+async def admin_edit_movie(request: Request, slug: str):
+    """Admin movie edit page."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    movie = None
+    if movie_repo is not None:
+        try:
+            movie = await movie_repo.get_by_slug(slug)
+        except Exception as e:
+            logger.error(f"Failed to get movie: {e}")
+
+    if not movie:
+        movies = get_cached_movies()
+        movie = find_movie_by_slug(movies, slug)
+
+    if not movie:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    return templates.TemplateResponse("admin/edit_movie.html", {
+        "request": request,
+        "movie": movie,
+    })
+
+
+@app.post("/admin/movie/{slug}")
+async def admin_update_movie(
+    request: Request,
+    slug: str,
+    title: str = Form(...),
+    year: int = Form(None),
+    rating: float = Form(None),
+    synopsis: str = Form(""),
+    director: str = Form(""),
+    genres: str = Form(""),
+):
+    """Update movie details."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    if movie_repo is not None:
+        try:
+            movie = await movie_repo.get_by_slug(slug)
+            if movie:
+                # Update fields
+                movie.title = title
+                movie.year = year
+                movie.rating = rating
+                movie.synopsis = synopsis
+                movie.director = director
+                movie.genres = [g.strip() for g in genres.split(",") if g.strip()]
+
+                # Save to database
+                await movie_repo.upsert_movies([movie])
+
+                # Invalidate cache
+                await get_cache().invalidate_all()
+
+                return RedirectResponse(
+                    url=f"/admin/movie/{slug}?success=1",
+                    status_code=302
+                )
+        except Exception as e:
+            logger.error(f"Failed to update movie: {e}")
+
+    return RedirectResponse(url=f"/admin/movie/{slug}?error=1", status_code=302)
+
+
+@app.get("/admin/lists")
+async def admin_curated_lists(request: Request):
+    """Admin curated lists management page."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    curated_lists = []
+    if curated_repo is not None:
+        try:
+            curated_lists = await curated_repo.get_all(active_only=False)
+        except Exception as e:
+            logger.error(f"Failed to get curated lists: {e}")
+
+    return templates.TemplateResponse("admin/curated_lists.html", {
+        "request": request,
+        "lists": curated_lists,
+    })
+
+
+@app.post("/admin/lists/create")
+async def admin_create_list(
+    request: Request,
+    label: str = Form(...),
+    slug: str = Form(...),
+    description: str = Form(""),
+):
+    """Create a new curated list."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    if curated_repo is not None:
+        try:
+            new_list = CuratedList(
+                slug=slug.lower().replace(" ", "-"),
+                label=label,
+                description=description,
+                is_active=True,
+            )
+            await curated_repo.create(new_list)
+        except Exception as e:
+            logger.error(f"Failed to create curated list: {e}")
+
+    return RedirectResponse(url="/admin/lists", status_code=302)
+
+
+@app.get("/admin/lists/{slug}")
+async def admin_edit_list(request: Request, slug: str):
+    """Edit a curated list."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    curated_list = None
+    movies = []
+
+    if curated_repo is not None:
+        try:
+            curated_list = await curated_repo.get_by_slug(slug)
+            if curated_list:
+                movies = await curated_repo.get_movies_for_list(slug, limit=100)
+        except Exception as e:
+            logger.error(f"Failed to get curated list: {e}")
+
+    if not curated_list:
+        raise HTTPException(status_code=404, detail="List not found")
+
+    return templates.TemplateResponse("admin/edit_list.html", {
+        "request": request,
+        "list": curated_list,
+        "movies": movies,
+    })
+
+
+@app.post("/admin/lists/{slug}/update")
+async def admin_update_list(
+    request: Request,
+    slug: str,
+    label: str = Form(...),
+    description: str = Form(""),
+    is_active: bool = Form(False),
+    display_order: int = Form(0),
+):
+    """Update a curated list."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    if curated_repo is not None:
+        try:
+            curated_list = await curated_repo.get_by_slug(slug)
+            if curated_list:
+                curated_list.label = label
+                curated_list.description = description
+                curated_list.is_active = is_active
+                curated_list.display_order = display_order
+                await curated_repo.update(curated_list)
+        except Exception as e:
+            logger.error(f"Failed to update curated list: {e}")
+
+    return RedirectResponse(url=f"/admin/lists/{slug}", status_code=302)
+
+
+@app.post("/admin/lists/{slug}/add-movie")
+async def admin_add_movie_to_list(
+    request: Request,
+    slug: str,
+    movie_slug: str = Form(...),
+):
+    """Add a movie to a curated list."""
+    if not verify_admin_key(request):
+        return {"success": False, "error": "Unauthorized"}
+
+    if curated_repo is not None:
+        try:
+            await curated_repo.add_movie(slug, movie_slug)
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Failed to add movie to list: {e}")
+            return {"success": False, "error": str(e)}
+
+    return {"success": False, "error": "Database not available"}
+
+
+@app.post("/admin/lists/{slug}/remove-movie")
+async def admin_remove_movie_from_list(
+    request: Request,
+    slug: str,
+    movie_slug: str = Form(...),
+):
+    """Remove a movie from a curated list."""
+    if not verify_admin_key(request):
+        return {"success": False, "error": "Unauthorized"}
+
+    if curated_repo is not None:
+        try:
+            await curated_repo.remove_movie(slug, movie_slug)
+            return {"success": True}
+        except Exception as e:
+            logger.error(f"Failed to remove movie from list: {e}")
+            return {"success": False, "error": str(e)}
+
+    return {"success": False, "error": "Database not available"}
+
+
+@app.post("/admin/lists/{slug}/delete")
+async def admin_delete_list(request: Request, slug: str):
+    """Delete a curated list."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    if curated_repo is not None:
+        try:
+            await curated_repo.delete(slug)
+        except Exception as e:
+            logger.error(f"Failed to delete curated list: {e}")
+
+    return RedirectResponse(url="/admin/lists", status_code=302)
+
+
+@app.post("/admin/refresh")
+async def admin_refresh_cache(
+    request: Request,
+    limit: int = Form(500),
+):
+    """Admin-only: Force refresh the movie cache and sync to MongoDB."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    movies = fetch_and_cache_movies(limit=limit, include_archive=True)
+    await sync_movies_to_mongodb(movies)
+
+    return RedirectResponse(url="/admin/dashboard?refreshed=1", status_code=302)
+
+
+# ========== CURATED LIST USER ROUTES ==========
+
+@app.get("/list/{slug}")
+async def curated_list_page(
+    request: Request,
+    slug: str,
+    page: int = Query(1, ge=1),
+):
+    """Display a curated list to users."""
+    per_page = 24
+    curated_list = None
+    movies = []
+    curated_lists = await get_curated_lists_for_menu()
+
+    if curated_repo is not None:
+        try:
+            curated_list = await curated_repo.get_by_slug(slug)
+            if curated_list and curated_list.is_active:
+                movies = await curated_repo.get_movies_for_list(slug, limit=100)
+        except Exception as e:
+            logger.error(f"Failed to get curated list: {e}")
+
+    if not curated_list or not curated_list.is_active:
+        raise HTTPException(status_code=404, detail="List not found")
+
+    total = len(movies)
+    skip = (page - 1) * per_page
+    paginated = movies[skip:skip + per_page]
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+
+    return templates.TemplateResponse("curated_list.html", {
+        "request": request,
+        "list": curated_list,
+        "movies": paginated,
+        "curated_lists": curated_lists,
+        "page": page,
+        "total_pages": total_pages,
+        "total_movies": total,
+        "base_url": BASE_URL,
+        "page_title": f"{curated_list.label} - Watchlazy",
+        "page_description": curated_list.description or f"Browse {curated_list.label} on Watchlazy.",
+        "canonical_path": f"/list/{slug}",
+        "active_tab": None,
+    })
+
+
+# ========== LEGACY API ENDPOINTS (Admin-only refresh) ==========
+
 @app.post("/refresh")
 async def refresh_cache(
+    request: Request,
     limit: int = Query(500, ge=100, le=1000, description="Number of movies to fetch"),
 ):
-    """Force refresh the movie cache and sync to MongoDB."""
+    """Force refresh the movie cache and sync to MongoDB. Requires admin key."""
+    if not verify_admin_key(request):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     movies = fetch_and_cache_movies(limit=limit, include_archive=True)
 
     # Sync to MongoDB

@@ -31,6 +31,7 @@ class MovieRepository:
         service: Optional[str] = None,
         availability: Optional[str] = None,
         min_rating: Optional[float] = None,
+        letter: Optional[str] = None,
         sort_by: str = "rating",
         skip: int = 0,
         limit: int = 24,
@@ -46,6 +47,11 @@ class MovieRepository:
             query["availability_types"] = availability
         if min_rating:
             query["rating"] = {"$gte": min_rating}
+        if letter:
+            if letter == "0-9":
+                query["title"] = {"$regex": "^[0-9]"}
+            else:
+                query["title"] = {"$regex": f"^{letter}", "$options": "i"}
 
         # Sort options
         sort_field = {
@@ -65,6 +71,7 @@ class MovieRepository:
         service: Optional[str] = None,
         availability: Optional[str] = None,
         min_rating: Optional[float] = None,
+        letter: Optional[str] = None,
     ) -> int:
         """Count movies matching filters."""
         query: Dict[str, Any] = {}
@@ -77,6 +84,11 @@ class MovieRepository:
             query["availability_types"] = availability
         if min_rating:
             query["rating"] = {"$gte": min_rating}
+        if letter:
+            if letter == "0-9":
+                query["title"] = {"$regex": "^[0-9]"}
+            else:
+                query["title"] = {"$regex": f"^{letter}", "$options": "i"}
 
         return await self.movies.count_documents(query)
 

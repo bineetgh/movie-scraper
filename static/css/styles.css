@@ -33,6 +33,8 @@ body {
 
 /* Header */
 header {
+    position: relative;
+    z-index: 100;
     text-align: center;
     padding: 15px 20px;
     background: linear-gradient(135deg, rgba(255,71,87,0.1) 0%, rgba(255,165,2,0.1) 100%);
@@ -87,11 +89,107 @@ header {
     font-weight: 400;
 }
 
+/* Header Navigation */
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link.active {
+    background: var(--gradient);
+}
+
+.dropdown-arrow {
+    transition: transform 0.2s ease;
+}
+
+.nav-dropdown {
+    position: relative;
+}
+
+.nav-dropdown:hover .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    padding: 8px 0;
+    background: var(--bg-elevated);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+    z-index: 100;
+}
+
+.nav-dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(5px);
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 10px 20px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+    background: rgba(255, 71, 87, 0.15);
+    color: var(--primary);
+}
+
+.dropdown-menu a.see-all {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 5px;
+    padding-top: 12px;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.dropdown-menu-genres {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 280px;
+}
+
+.dropdown-menu-genres a.see-all {
+    grid-column: 1 / -1;
+}
+
 /* Search */
 .search-box {
     display: flex;
     gap: 10px;
-    max-width: 400px;
+    max-width: 300px;
     flex: 1;
 }
 
@@ -135,37 +233,137 @@ header {
     box-shadow: 0 8px 30px rgba(255, 71, 87, 0.4);
 }
 
-/* Navigation Tabs */
-.tabs {
+/* Alphabet Filter */
+.alphabet-filter {
     display: flex;
-    gap: 8px;
-    justify-content: center;
     flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 25px;
+    padding: 15px;
+    background: var(--bg-surface);
+    border-radius: 12px;
+}
+
+.alphabet-filter a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.alphabet-filter a:hover {
+    background: var(--primary);
+    transform: scale(1.1);
+}
+
+.alphabet-filter a.active {
+    background: var(--gradient);
+}
+
+.alphabet-filter a.all {
+    width: auto;
+    padding: 0 15px;
+}
+
+/* Genre Section */
+.genre-section {
+    margin-bottom: 40px;
+}
+
+.genre-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     margin-bottom: 15px;
 }
 
-.tab {
-    padding: 8px 18px;
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 50px;
-    background: var(--bg-surface);
+.genre-section-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
     color: var(--text);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 0.85rem;
-    font-family: inherit;
-    font-weight: 500;
+}
+
+.genre-section-header a {
+    color: var(--primary);
     text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
-.tab:hover {
-    border-color: var(--primary);
+.genre-section-header a:hover {
+    text-decoration: underline;
+}
+
+.movies-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scroll-snap-type: x mandatory;
+}
+
+.movies-row::-webkit-scrollbar {
+    height: 6px;
+}
+
+.movies-row::-webkit-scrollbar-track {
+    background: var(--bg-surface);
+    border-radius: 3px;
+}
+
+.movies-row::-webkit-scrollbar-thumb {
+    background: var(--bg-elevated);
+    border-radius: 3px;
+}
+
+.movies-row .movie-card {
+    flex: 0 0 220px;
+    scroll-snap-align: start;
+}
+
+/* All Genres Page */
+.genres-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.genre-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.genre-card:hover {
     background: rgba(255, 71, 87, 0.15);
+    border-color: var(--primary);
+    transform: translateY(-3px);
 }
 
-.tab.active {
-    background: var(--gradient);
-    border-color: transparent;
+.genre-card .name {
+    font-weight: 600;
+}
+
+.genre-card .count {
+    color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 /* Movies Grid */
@@ -644,10 +842,33 @@ footer a {
 
     .header-content {
         flex-direction: column;
+        gap: 15px;
+    }
+
+    .header-nav {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .nav-link {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .dropdown-menu {
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+    }
+
+    .nav-dropdown:hover .dropdown-menu {
+        transform: translateX(-50%) translateY(5px);
     }
 
     .search-box {
         max-width: 100%;
+        order: 2;
     }
 }
 
@@ -656,13 +877,19 @@ footer a {
         grid-template-columns: 1fr;
     }
 
-    .tabs {
-        gap: 5px;
+    .header-nav {
+        gap: 3px;
     }
 
-    .tab {
-        padding: 6px 12px;
+    .nav-link {
+        padding: 5px 10px;
         font-size: 0.8rem;
+    }
+
+    .alphabet-filter a {
+        width: 30px;
+        height: 30px;
+        font-size: 0.75rem;
     }
 }
 

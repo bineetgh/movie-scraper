@@ -1,0 +1,133 @@
+{% extends "admin/base.html" %}
+{% set active_page = 'lists' %}
+
+{% block title %}Edit {{ list.label }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit List: {{ list.label }}</h1>
+    <p><a href="/admin/lists" style="color: var(--primary);">&larr; Back to Lists</a></p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+    <!-- List Settings -->
+    <div>
+        <div class="card">
+            <h3 style="margin-bottom: 15px;">List Settings</h3>
+            <form action="/admin/lists/{{ list.slug }}/update" method="post">
+                <div class="form-group">
+                    <label for="label">Label</label>
+                    <input type="text" id="label" name="label" class="form-control" value="{{ list.label }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" class="form-control" rows="3">{{ list.description or '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="display_order">Display Order</label>
+                    <input type="number" id="display_order" name="display_order" class="form-control" value="{{ list.display_order }}" min="0">
+                    <small style="color: var(--text-muted);">Lower numbers appear first in menu</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="is_active" value="true" {{ 'checked' if list.is_active else '' }}>
+                        Active (visible to users)
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Settings</button>
+            </form>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3 style="margin-bottom: 15px; color: var(--danger);">Danger Zone</h3>
+            <form action="/admin/lists/{{ list.slug }}/delete" method="post"
+                  onsubmit="return confirm('Are you sure? This will permanently delete this list.')">
+                <button type="submit" class="btn btn-danger" style="width: 100%;">Delete List</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Movies in List -->
+    <div class="card">
+        <div class="flex-between" style="margin-bottom: 15px;">
+            <h3>Movies in List ({{ movies | length }})</h3>
+            <a href="/list/{{ list.slug }}" target="_blank" class="btn btn-secondary btn-sm">Preview</a>
+        </div>
+
+        {% if movies %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Movie</th>
+                        <th>Year</th>
+                        <th>Rating</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movie in movies %}
+                    <tr id="movie-{{ movie.slug }}">
+                        <td>
+                            <div class="movie-title-cell">
+                                <img src="{{ movie.poster_url or '/static/placeholder.png' }}"
+                                     alt="{{ movie.title }}"
+                                     class="movie-poster-sm"
+                                     onerror="this.src='/static/placeholder.png'">
+                                <strong>{{ movie.title }}</strong>
+                            </div>
+                        </td>
+                        <td>{{ movie.year or '-' }}</td>
+                        <td>{{ '%.1f' % movie.rating if movie.rating else '-' }}</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="removeMovie('{{ list.slug }}', '{{ movie.slug }}')">
+                                Remove
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <p>No movies in this list yet.</p>
+            <p style="font-size: 0.85rem; margin-top: 10px;">
+                Go to <a href="/admin/dashboard" style="color: var(--primary);">Movies</a> and use the "Add to list" dropdown to add movies.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function removeMovie(listSlug, movieSlug) {
+    if (!confirm('Remove this movie from the list?')) return;
+
+    const formData = new FormData();
+    formData.append('movie_slug', movieSlug);
+
+    try {
+        const response = await fetch(`/admin/lists/${listSlug}/remove-movie`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            document.getElementById('movie-' + movieSlug).remove();
+        } else {
+            alert('Failed to remove movie: ' + (result.error || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+</script>
+{% endblock %}

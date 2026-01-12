@@ -15,8 +15,8 @@
 {% block content %}
 <section>
     <h1 style="font-size: 1.5rem; margin-bottom: 20px; color: var(--text);">
-        {% if current_genre %}
-        {{ current_genre }} Movies
+        {% if current_availability and current_availability != 'all' %}
+        {{ current_availability | capitalize }} Movies
         {% elif current_service %}
         Movies on {{ current_service }}
         {% else %}
@@ -27,55 +27,34 @@
         </span>
     </h1>
 
-    <!-- Filters -->
-    <form action="/browse" method="get" class="filters">
-        <select name="availability" onchange="this.form.submit()">
-            <option value="all" {{ 'selected' if current_availability == 'all' else '' }}>All Availability</option>
-            <option value="free" {{ 'selected' if current_availability == 'free' else '' }}>Free Only</option>
-            <option value="subscription" {{ 'selected' if current_availability == 'subscription' else '' }}>Subscription</option>
-            <option value="rent" {{ 'selected' if current_availability == 'rent' else '' }}>Rent</option>
-            <option value="buy" {{ 'selected' if current_availability == 'buy' else '' }}>Buy</option>
-        </select>
+    <!-- Alphabet Filter -->
+    <div class="alphabet-filter">
+        <a href="/browse?{{ 'availability=' + current_availability if current_availability and current_availability != 'all' else '' }}"
+           class="all {{ 'active' if not current_letter else '' }}">All</a>
+        {% for letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' %}
+        <a href="/browse?letter={{ letter }}{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}"
+           class="{{ 'active' if current_letter == letter else '' }}">{{ letter }}</a>
+        {% endfor %}
+        <a href="/browse?letter=0-9{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}"
+           class="{{ 'active' if current_letter == '0-9' else '' }}">#</a>
+    </div>
 
-        <select name="genre" onchange="this.form.submit()">
-            <option value="">All Genres</option>
-            {% for genre in genres %}
-            <option value="{{ genre }}" {{ 'selected' if genre == current_genre else '' }}>{{ genre }}</option>
-            {% endfor %}
-        </select>
-
-        <select name="service" onchange="this.form.submit()">
+    <!-- Quick Filters -->
+    <div class="filters" style="margin-bottom: 20px;">
+        <select name="service" onchange="window.location.href='/browse?service=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
             <option value="">All Services</option>
             {% for service in services %}
             <option value="{{ service }}" {{ 'selected' if service == current_service else '' }}>{{ service }}</option>
             {% endfor %}
         </select>
 
-        <select name="min_rating" onchange="this.form.submit()">
+        <select name="min_rating" onchange="window.location.href='/browse?min_rating=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
             <option value="0" {{ 'selected' if min_rating == 0 else '' }}>Any Rating</option>
             <option value="6" {{ 'selected' if min_rating == 6 else '' }}>IMDb 6+</option>
             <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
             <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
         </select>
-
-        {% if current_availability == 'rent' %}
-        <select name="max_rent_price" onchange="this.form.submit()">
-            <option value="">Any Rent Price</option>
-            <option value="99" {{ 'selected' if max_rent_price == 99 else '' }}>Under Rs.99</option>
-            <option value="199" {{ 'selected' if max_rent_price == 199 else '' }}>Under Rs.199</option>
-            <option value="299" {{ 'selected' if max_rent_price == 299 else '' }}>Under Rs.299</option>
-        </select>
-        {% endif %}
-
-        {% if current_availability == 'buy' %}
-        <select name="max_buy_price" onchange="this.form.submit()">
-            <option value="">Any Buy Price</option>
-            <option value="299" {{ 'selected' if max_buy_price == 299 else '' }}>Under Rs.299</option>
-            <option value="499" {{ 'selected' if max_buy_price == 499 else '' }}>Under Rs.499</option>
-            <option value="799" {{ 'selected' if max_buy_price == 799 else '' }}>Under Rs.799</option>
-        </select>
-        {% endif %}
-    </form>
+    </div>
 
     <div class="movies-grid">
         {% for movie in movies %}
@@ -95,11 +74,9 @@
     {% if total_pages > 1 %}
     {% set filter_params = '' %}
     {% if current_availability and current_availability != 'all' %}{% set filter_params = filter_params + '&availability=' + current_availability %}{% endif %}
-    {% if current_genre %}{% set filter_params = filter_params + '&genre=' + current_genre %}{% endif %}
+    {% if current_letter %}{% set filter_params = filter_params + '&letter=' + current_letter %}{% endif %}
     {% if current_service %}{% set filter_params = filter_params + '&service=' + current_service %}{% endif %}
     {% if min_rating %}{% set filter_params = filter_params + '&min_rating=' + min_rating|string %}{% endif %}
-    {% if max_rent_price %}{% set filter_params = filter_params + '&max_rent_price=' + max_rent_price|string %}{% endif %}
-    {% if max_buy_price %}{% set filter_params = filter_params + '&max_buy_price=' + max_buy_price|string %}{% endif %}
 
     <nav class="pagination" aria-label="Pagination">
         {% if page > 1 %}

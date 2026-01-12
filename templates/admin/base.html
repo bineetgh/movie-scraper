@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin{% endblock %} - Watchlazy Admin</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF4757;
+            --secondary: #FFA502;
+            --bg-dark: #0F0F1A;
+            --bg-surface: #1A1A2E;
+            --bg-elevated: #252540;
+            --text: #FFFFFF;
+            --text-muted: #8B8B9A;
+            --success: #27ae60;
+            --danger: #e74c3c;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .admin-header {
+            background: var(--bg-surface);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .admin-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .admin-nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .admin-nav a:hover, .admin-nav a.active {
+            color: var(--primary);
+        }
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .page-header {
+            margin-bottom: 30px;
+        }
+        .page-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        .page-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .card {
+            background: var(--bg-surface);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #ff6b7a;
+        }
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text);
+        }
+        .btn-secondary:hover {
+            background: #2f2f50;
+        }
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: var(--bg-dark);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        th {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        td {
+            font-size: 0.9rem;
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .alert {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        .alert-success {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        .alert-error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-active {
+            background: rgba(39, 174, 96, 0.2);
+            color: var(--success);
+        }
+        .badge-inactive {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+        }
+        .pagination {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .pagination a, .pagination span {
+            padding: 8px 14px;
+            border-radius: 6px;
+            background: var(--bg-elevated);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .pagination a:hover {
+            background: var(--primary);
+        }
+        .pagination span.current {
+            background: var(--primary);
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            flex: 1;
+            max-width: 300px;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .movie-poster-sm {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: var(--bg-elevated);
+        }
+        .movie-title-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .checkbox-label input {
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <header class="admin-header">
+        <a href="/admin/dashboard" class="admin-logo">Watchlazy Admin</a>
+        <nav class="admin-nav">
+            <a href="/admin/dashboard" class="{{ 'active' if active_page == 'dashboard' else '' }}">Movies</a>
+            <a href="/admin/lists" class="{{ 'active' if active_page == 'lists' else '' }}">Curated Lists</a>
+            <a href="/" target="_blank">View Site</a>
+            <a href="/admin/logout">Logout</a>
+        </nav>
+    </header>
+
+    <div class="admin-container">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

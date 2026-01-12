@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "All Genres - Watchlazy",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/genres"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <h1 style="font-size: 1.5rem; margin-bottom: 10px; color: var(--text);">
+        All Genres
+    </h1>
+    <p style="color: var(--text-muted); margin-bottom: 25px;">
+        Browse movies by genre
+    </p>
+
+    <div class="genres-grid">
+        {% for genre, count in genres %}
+        <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="genre-card">
+            <span class="name">{{ genre }}</span>
+            <span class="count">{{ count }} movies</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if genres | length == 0 %}
+    <div class="no-results">
+        <div class="no-results-icon">🎭</div>
+        <h3>No genres found</h3>
+        <p>Check back soon!</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

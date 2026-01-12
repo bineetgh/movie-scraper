@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "{{ list.label }} - Watchlazy",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/list/{{ list.slug }}"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <h1 style="font-size: 1.5rem; margin-bottom: 10px; color: var(--text);">
+        {{ list.label }}
+    </h1>
+    {% if list.description %}
+    <p style="color: var(--text-muted); margin-bottom: 20px;">{{ list.description }}</p>
+    {% endif %}
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 25px;">
+        {{ total_movies }} movies
+    </p>
+
+    <div class="movies-grid">
+        {% for movie in movies %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+
+    {% if movies | length == 0 %}
+    <div class="no-results">
+        <div class="no-results-icon">🎬</div>
+        <h3>No movies in this list yet</h3>
+        <p>Check back soon for new additions!</p>
+    </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="Pagination">
+        {% if page > 1 %}
+        <a href="/list/{{ list.slug }}?page={{ page - 1 }}">&laquo; Prev</a>
+        {% else %}
+        <span class="disabled">&laquo; Prev</span>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+            <a href="/list/{{ list.slug }}?page={{ p }}">{{ p }}</a>
+            {% elif p == 4 and page > 5 %}
+            <span>...</span>
+            {% elif p == total_pages - 2 and page < total_pages - 4 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/list/{{ list.slug }}?page={{ page + 1 }}">Next &raquo;</a>
+        {% else %}
+        <span class="disabled">Next &raquo;</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
