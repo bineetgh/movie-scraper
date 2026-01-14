@@ -25,9 +25,13 @@
             <p class="movie-synopsis" itemprop="description">{{ movie.synopsis[:150] }}{% if movie.synopsis | length > 150 %}...{% endif %}</p>
             {% endif %}
             <div class="movie-services">
-                {% for service in movie.streaming_services[:3] %}
-                <span class="service-tag">{{ service }}</span>
-                {% endfor %}
+                {% if movie.is_free %}
+                <span class="service-tag service-tag-free">Free</span>
+                {% elif movie.has_subscription %}
+                <span class="service-tag service-tag-sub">Subscription</span>
+                {% elif movie.is_rentable or movie.is_buyable %}
+                <span class="service-tag service-tag-rent">Rent / Buy</span>
+                {% endif %}
             </div>
         </div>
     </a>

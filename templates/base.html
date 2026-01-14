@@ -63,8 +63,9 @@
                     </a>
                 </div>
                 <nav class="header-nav">
+                    <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Home</a>
                     <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
-                    <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Top Rated</a>
+                    <a href="/top-rated" class="nav-link {{ 'active' if active_tab == 'top-rated' else '' }}">Top Rated</a>
                     <div class="nav-dropdown">
                         <a href="/browse" class="nav-link {{ 'active' if active_tab == 'browse' else '' }}">
                             Browse
@@ -133,8 +134,9 @@
         <div class="mobile-nav-overlay" id="mobileNav">
             <button class="close-nav" id="closeNav" aria-label="Close menu">&times;</button>
             <nav>
+                <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Home</a>
                 <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
-                <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Top Rated</a>
+                <a href="/top-rated" class="nav-link {{ 'active' if active_tab == 'top-rated' else '' }}">Top Rated</a>
                 <div class="nav-dropdown">
                     <span class="nav-link">
                         Browse

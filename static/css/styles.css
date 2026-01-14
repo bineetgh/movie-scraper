@@ -48,13 +48,14 @@ header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
+    gap: 10px;
 }
 
 .header-left {
     display: flex;
     align-items: center;
     gap: 20px;
+    flex-shrink: 0;
 }
 
 .logo {
@@ -195,7 +196,8 @@ header {
     display: flex;
     gap: 0;
     max-width: 220px;
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 100px;
 }
 
 .search-box input {
@@ -526,6 +528,21 @@ header {
     font-size: 0.75rem;
     color: var(--primary);
     font-weight: 500;
+}
+
+.service-tag-free {
+    background: rgba(39, 174, 96, 0.2);
+    color: #2ecc71;
+}
+
+.service-tag-sub {
+    background: rgba(52, 152, 219, 0.2);
+    color: #3498db;
+}
+
+.service-tag-rent {
+    background: rgba(155, 89, 182, 0.2);
+    color: #9b59b6;
 }
 
 /* Skeleton Loading */
@@ -887,6 +904,7 @@ footer a {
     background: none;
     border: none;
     padding: 4px;
+    flex-shrink: 0;
 }
 
 .hamburger span {
@@ -1009,7 +1027,9 @@ footer a {
     }
 
     .search-box {
-        max-width: 160px;
+        max-width: none;
+        flex: 1 1 100px;
+        min-width: 80px;
     }
 
     .browse-header {
@@ -1058,12 +1078,61 @@ footer a {
         font-size: 0.7rem;
     }
 
+    .header-content {
+        position: relative;
+    }
+
+    .logo-text {
+        transition: opacity 0.2s ease;
+    }
+
     .search-box {
-        max-width: 140px;
+        position: absolute;
+        right: 38px;
+        top: 50%;
+        transform: translateY(-50%);
+        min-width: auto;
+        width: 36px;
+        max-width: 36px;
+        transition: all 0.3s ease;
+        overflow: hidden;
     }
 
     .search-box input {
-        padding: 8px 10px;
+        width: 0;
+        padding: 8px 0;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .search-box button {
+        border-radius: 50%;
+        padding: 8px;
+    }
+
+    .search-box:focus-within,
+    .search-box.expanded {
+        width: calc(100% - 90px);
+        max-width: 250px;
+    }
+
+    .search-box:focus-within input,
+    .search-box.expanded input {
+        width: 100%;
+        padding: 8px 12px;
+        opacity: 1;
+    }
+
+    .search-box:focus-within button,
+    .search-box.expanded button {
+        border-radius: 0 25px 25px 0;
+    }
+
+    .header-content:has(.search-box:focus-within) .logo-text,
+    .header-content:has(.search-box.expanded) .logo-text {
+        opacity: 0;
+        width: 0;
+        overflow: hidden;
     }
 }
 

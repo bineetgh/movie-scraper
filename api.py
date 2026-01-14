@@ -451,7 +451,82 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
 
 @app.get("/")
 async def home(request: Request):
-    """SSR home page with top-rated movies."""
+    """SSR home page with Netflix-style collections."""
+    curated_lists = await get_curated_lists_for_menu()
+
+    # Fetch top rated movies
+    top_movies = []
+    if movie_repo is not None:
+        try:
+            top_movies = await movie_repo.get_top_rated(limit=12)
+        except Exception as e:
+            logger.error(f"MongoDB query failed: {e}")
+
+    if not top_movies:
+        movies = get_cached_movies()
+        top_movies = sorted(
+            [m for m in movies if m.rating],
+            key=lambda m: m.rating or 0,
+            reverse=True
+        )[:12]
+
+    # Fetch movies for each curated collection
+    collections = []
+    if curated_repo is not None:
+        for clist in curated_lists:
+            try:
+                clist_movies = await curated_repo.get_movies_for_list(clist.slug, limit=12)
+                if clist_movies:
+                    collections.append({
+                        "list": clist,
+                        "movies": clist_movies
+                    })
+            except Exception as e:
+                logger.error(f"Failed to fetch movies for list {clist.slug}: {e}")
+
+    # Fetch recent movies (by ID descending as proxy for recent)
+    recent_movies = []
+    if movie_repo is not None:
+        try:
+            recent_movies = await movie_repo.get_all(sort_by="recent", limit=12)
+        except Exception:
+            pass
+
+    # Prepare all movies data for "For Me" section (client-side)
+    all_movies = await get_movies_from_db_or_cache()
+    movies_data = [
+        {
+            "slug": m.slug,
+            "title": m.title,
+            "year": m.year,
+            "genres": m.genres,
+            "rating": m.rating,
+            "poster_url": m.poster_url,
+            "is_free": m.is_free,
+            "has_subscription": m.has_subscription,
+        }
+        for m in all_movies
+    ]
+    movies_json = json.dumps(movies_data)
+
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "top_rated_movies": top_movies,
+        "collections": collections,
+        "recent_movies": recent_movies,
+        "movies_json": movies_json,
+        "curated_lists": curated_lists,
+        "base_url": BASE_URL,
+        "page_title": "Watchlazy - Free Movies, Zero Effort",
+        "page_description": "Discover and watch free movies on JioHotstar, MX Player, Zee5, Plex and more. No subscriptions needed.",
+        "canonical_path": "/",
+        "active_tab": "home",
+    })
+
+
+@app.get("/top-rated")
+async def top_rated(request: Request):
+    """SSR top-rated movies page."""
     cache_mgr = get_cache()
     curated_lists = await get_curated_lists_for_menu()
     # Try cache first (Redis or memory)
@@ -482,10 +557,10 @@ async def home(request: Request):
         "movies": top_movies,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
-        "page_title": "Watchlazy - Free Movies, Zero Effort",
-        "page_description": "Discover and watch free movies on JioHotstar, MX Player, Zee5, Plex and more. No subscriptions needed.",
-        "canonical_path": "/",
-        "active_tab": "home",
+        "page_title": "Top Rated Movies - Watchlazy",
+        "page_description": "Browse the highest rated movies available to stream. Find top IMDb rated films on Watchlazy.",
+        "canonical_path": "/top-rated",
+        "active_tab": "top-rated",
     })
 
 
@@ -810,7 +885,8 @@ async def for_me_page(request: Request):
             "rating": m.rating,
             "synopsis": m.synopsis[:200] if m.synopsis else "",
             "poster_url": m.poster_url,
-            "streaming_services": m.streaming_services,
+            "is_free": m.is_free,
+            "has_subscription": m.has_subscription,
         }
         for m in movies
     ]
@@ -842,6 +918,7 @@ async def sitemap():
     # Static pages
     static_pages = [
         ("/", "1.0", "daily"),
+        ("/top-rated", "0.9", "daily"),
         ("/browse", "0.9", "daily"),
         ("/for-me", "0.8", "daily"),
     ]

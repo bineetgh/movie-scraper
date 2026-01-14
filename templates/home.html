@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Watchlazy",
+    "url": "{{ base_url }}",
+    "description": "{{ page_description }}",
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ base_url }}/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+    }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- For Me Section (personalized) -->
+<section class="genre-section" id="forMeSection" style="display: none;">
+    <div class="genre-section-header">
+        <h2>For You</h2>
+        <a href="/for-me">See All</a>
+    </div>
+    <div class="movies-row" id="forMeMovies">
+        <!-- Populated by JavaScript -->
+    </div>
+</section>
+
+<!-- Top Rated Section -->
+<section class="genre-section">
+    <div class="genre-section-header">
+        <h2>Top Rated</h2>
+        <a href="/top-rated">See All</a>
+    </div>
+    <div class="movies-row">
+        {% for movie in top_rated_movies[:12] %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Curated Collections -->
+{% for collection in collections %}
+<section class="genre-section">
+    <div class="genre-section-header">
+        <h2>{{ collection.list.label }}</h2>
+        <a href="/list/{{ collection.list.slug }}">See All</a>
+    </div>
+    <div class="movies-row">
+        {% for movie in collection.movies[:12] %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+
+<!-- Recently Added (if available) -->
+{% if recent_movies %}
+<section class="genre-section">
+    <div class="genre-section-header">
+        <h2>Recently Added</h2>
+        <a href="/browse">Browse All</a>
+    </div>
+    <div class="movies-row">
+        {% for movie in recent_movies[:12] %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if not collections and not top_rated_movies %}
+<div class="no-results">
+    <div class="no-results-icon">🎬</div>
+    <h3>No movies available</h3>
+    <p>Check back soon for new content!</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Pass movies data to JavaScript for "For Me" section
+window.allMoviesData = {{ movies_json | safe }};
+
+// Initialize For Me section on homepage
+(function() {
+    function initHomeForMe() {
+        const section = document.getElementById('forMeSection');
+        const container = document.getElementById('forMeMovies');
+        if (!section || !container) return;
+
+        const WATCHED_KEY = 'watchlazyWatched';
+        const REACTIONS_KEY = 'watchlazyReactions';
+
+        const watched = JSON.parse(localStorage.getItem(WATCHED_KEY) || '{}');
+        const reactions = JSON.parse(localStorage.getItem(REACTIONS_KEY) || '{}');
+
+        // Check if user has preferences
+        const hasPreferences = Object.keys(reactions).length > 0 || Object.keys(watched).length > 0;
+        if (!hasPreferences) return;
+
+        // Calculate genre scores
+        const genreScores = {};
+        const watchedSlugs = {};
+        Object.keys(watched).forEach(function(slug) {
+            watchedSlugs[slug] = true;
+            (watched[slug].genres || []).forEach(function(genre) {
+                genreScores[genre] = (genreScores[genre] || 0) + 1;
+            });
+        });
+
+        Object.keys(reactions).forEach(function(slug) {
+            const data = reactions[slug];
+            const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
+            (data.genres || []).forEach(function(genre) {
+                genreScores[genre] = (genreScores[genre] || 0) + weight;
+            });
+        });
+
+        // Score and filter movies
+        const allMovies = window.allMoviesData || [];
+        const scoredMovies = allMovies
+            .filter(function(m) { return !watchedSlugs[m.slug]; })
+            .map(function(m) {
+                var score = 0;
+                (m.genres || []).forEach(function(g) {
+                    score += (genreScores[g] || 0) * 10;
+                });
+                if (m.rating) score += m.rating * 2;
+                m.recScore = score;
+                return m;
+            })
+            .filter(function(m) { return m.recScore > 0; })
+            .sort(function(a, b) { return b.recScore - a.recScore; })
+            .slice(0, 12);
+
+        if (scoredMovies.length === 0) return;
+
+        // Show section and populate
+        section.style.display = 'block';
+
+        var html = '';
+        scoredMovies.forEach(function(movie) {
+            html += '<article class="movie-card" data-movie-slug="' + movie.slug + '" data-genres="' + (movie.genres || []).join(',') + '">' +
+                '<a href="/movie/' + movie.slug + '">' +
+                '<div class="poster-container">';
+
+            if (movie.poster_url) {
+                html += '<img src="' + movie.poster_url + '" alt="' + movie.title + ' poster" loading="lazy" class="movie-poster">';
+            } else {
+                html += '<div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">🎬</div>';
+            }
+
+            html += '</div>' +
+                '<div class="movie-info">' +
+                '<h3 class="movie-title">' + movie.title + '</h3>' +
+                '<div class="movie-meta">';
+
+            if (movie.year) html += '<span>' + movie.year + '</span>';
+            if (movie.rating) html += '<span class="movie-rating">' + movie.rating + ' IMDb</span>';
+
+            html += '</div></div></a></article>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHomeForMe);
+    } else {
+        initHomeForMe();
+    }
+})();
+</script>
+{% endblock %}

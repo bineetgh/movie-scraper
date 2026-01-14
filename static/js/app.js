@@ -318,7 +318,6 @@
 
     function createMovieCardHtml(movie) {
         const genres = (movie.genres || []).join(',');
-        const services = (movie.streaming_services || []).slice(0, 3);
         const synopsis = movie.synopsis ?
             (movie.synopsis.length > 150 ? movie.synopsis.substring(0, 150) + '...' : movie.synopsis) : '';
 
@@ -352,9 +351,11 @@
         }
 
         html += '<div class="movie-services">';
-        services.forEach(function(s) {
-            html += '<span class="service-tag">' + s + '</span>';
-        });
+        if (movie.is_free) {
+            html += '<span class="service-tag service-tag-free">Free</span>';
+        } else if (movie.has_subscription) {
+            html += '<span class="service-tag service-tag-sub">Subscription</span>';
+        }
         html += '</div></div></a>' +
             '<div class="movie-actions-bar">' +
             '<button class="watched-btn" onclick="event.preventDefault(); toggleWatched(\'' + movie.slug + '\')" title="Mark as watched">' +
@@ -368,6 +369,56 @@
             '</div></div></article>';
 
         return html;
+    }
+
+    // ========== Mobile Search ==========
+    function initMobileSearch() {
+        const searchBox = document.querySelector('.search-box');
+        const searchInput = searchBox ? searchBox.querySelector('input') : null;
+        const searchBtn = searchBox ? searchBox.querySelector('button') : null;
+
+        if (!searchBox || !searchInput || !searchBtn) return;
+
+        // Expand when input is focused
+        searchInput.addEventListener('focus', function() {
+            if (window.innerWidth <= 480) {
+                searchBox.classList.add('expanded');
+            }
+        });
+
+        searchBtn.addEventListener('click', function(e) {
+            // Check if we're in mobile view (480px or less)
+            if (window.innerWidth <= 480) {
+                const isExpanded = searchBox.classList.contains('expanded');
+
+                // First click: always expand and focus
+                if (!isExpanded) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    searchBox.classList.add('expanded');
+                    searchInput.focus();
+                    searchInput.select(); // Select text so user can type new query
+                    return;
+                }
+
+                // Already expanded: submit if has text, otherwise just focus
+                if (!searchInput.value.trim()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    searchInput.focus();
+                }
+                // If has text, let the form submit normally
+            }
+        });
+
+        // Collapse when clicking outside search box
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 480 && searchBox.classList.contains('expanded')) {
+                if (!searchBox.contains(e.target)) {
+                    searchBox.classList.remove('expanded');
+                }
+            }
+        });
     }
 
     // ========== Mobile Navigation ==========
@@ -406,6 +457,7 @@
         initUserStates();
         initForMePage();
         initMobileNav();
+        initMobileSearch();
     }
 
     if (document.readyState === 'loading') {
