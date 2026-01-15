@@ -869,6 +869,163 @@ async def search_page(request: Request, q: str = Query("")):
     })
 
 
+@app.get("/upcoming")
+async def upcoming_movies_page(request: Request):
+    """SSR page showing upcoming movie releases."""
+    curated_lists = await get_curated_lists_for_menu()
+    upcoming_movies = []
+
+    # Fetch upcoming movies from TMDB
+    tmdb = TMDBClient()
+    if tmdb.is_available:
+        try:
+            upcoming_movies = tmdb.fetch_upcoming(region="IN", pages=3)
+        except Exception as e:
+            logger.error(f"Failed to fetch upcoming movies: {e}")
+
+    # Filter to only show future releases
+    from datetime import date
+    today = date.today().isoformat()
+    upcoming_movies = [m for m in upcoming_movies if m.release_date and m.release_date >= today]
+
+    return templates.TemplateResponse("upcoming.html", {
+        "request": request,
+        "movies": upcoming_movies,
+        "curated_lists": curated_lists,
+        "base_url": BASE_URL,
+        "page_title": "Upcoming Movies - New Releases - Watchlazy",
+        "page_description": "Discover upcoming movie releases. See what movies are coming soon to theaters and streaming platforms.",
+        "canonical_path": "/upcoming",
+        "active_tab": "upcoming",
+    })
+
+
+@app.get("/upcoming/{tmdb_id}")
+async def upcoming_movie_detail(request: Request, tmdb_id: int):
+    """SSR detail page for an upcoming movie."""
+    curated_lists = await get_curated_lists_for_menu()
+    movie = None
+
+    # Fetch movie details from TMDB
+    tmdb = TMDBClient()
+    if tmdb.is_available:
+        try:
+            movie = tmdb.get_upcoming_movie_full(tmdb_id)
+        except Exception as e:
+            logger.error(f"Failed to fetch upcoming movie {tmdb_id}: {e}")
+
+    if movie is None:
+        raise HTTPException(status_code=404, detail="Movie not found")
+
+    # Format release date for display
+    release_date_formatted = ""
+    if movie.release_date:
+        try:
+            from datetime import datetime
+            dt = datetime.strptime(movie.release_date, "%Y-%m-%d")
+            release_date_formatted = dt.strftime("%B %d, %Y")
+        except ValueError:
+            release_date_formatted = movie.release_date
+
+    return templates.TemplateResponse("upcoming_detail.html", {
+        "request": request,
+        "movie": movie,
+        "release_date_formatted": release_date_formatted,
+        "curated_lists": curated_lists,
+        "base_url": BASE_URL,
+        "page_title": f"{movie.title} ({movie.year}) - Upcoming - Watchlazy" if movie.year else f"{movie.title} - Upcoming - Watchlazy",
+        "page_description": movie.synopsis[:160] if movie.synopsis else f"{movie.title} is coming soon. Release date: {release_date_formatted}",
+        "canonical_path": f"/upcoming/{tmdb_id}",
+        "og_type": "video.movie",
+        "og_image": movie.tmdb_poster_url or movie.poster_url,
+        "active_tab": "upcoming",
+    })
+
+
+@app.get("/free-movies")
+async def free_movies_page(
+    request: Request,
+    page: int = Query(1, ge=1),
+):
+    """SSR page showing all free movies with play buttons."""
+    per_page = 24
+    skip = (page - 1) * per_page
+    paginated = []
+    total = 0
+    curated_lists = await get_curated_lists_for_menu()
+
+    # Get free movies from MongoDB
+    if movie_repo is not None:
+        try:
+            paginated, total = await asyncio.gather(
+                movie_repo.get_all(
+                    availability="free",
+                    sort_by="rating",
+                    skip=skip,
+                    limit=per_page,
+                ),
+                movie_repo.count(availability="free"),
+            )
+        except Exception as e:
+            logger.error(f"MongoDB query failed: {e}")
+
+    # Fallback to file cache
+    if not paginated:
+        movies = get_cached_movies()
+        free_movies = [m for m in movies if m.is_free]
+        free_movies = sorted(free_movies, key=lambda m: m.rating or 0, reverse=True)
+        total = len(free_movies)
+        paginated = free_movies[skip:skip + per_page]
+
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+
+    return templates.TemplateResponse("free_movies.html", {
+        "request": request,
+        "movies": paginated,
+        "curated_lists": curated_lists,
+        "page": page,
+        "total_pages": total_pages,
+        "total_movies": total,
+        "base_url": BASE_URL,
+        "page_title": "Free Movies - Watch Without Subscription - Watchlazy",
+        "page_description": "Watch free movies online without subscription. Stream movies for free on JioHotstar, MX Player, Zee5, Internet Archive and more.",
+        "canonical_path": "/free-movies",
+        "active_tab": "free",
+    })
+
+
+@app.get("/random-picks")
+async def random_picks_page(request: Request):
+    """SSR random movie picks page - refreshes on every load."""
+    curated_lists = await get_curated_lists_for_menu()
+    random_movies = []
+
+    # Get random movies from MongoDB
+    if movie_repo is not None:
+        try:
+            random_movies = await movie_repo.get_random(limit=24)
+        except Exception as e:
+            logger.error(f"MongoDB random query failed: {e}")
+
+    # Fallback to file cache
+    if not random_movies:
+        movies = get_cached_movies()
+        if movies:
+            count = min(24, len(movies))
+            random_movies = random.sample(movies, count)
+
+    return templates.TemplateResponse("random_picks.html", {
+        "request": request,
+        "movies": random_movies,
+        "curated_lists": curated_lists,
+        "base_url": BASE_URL,
+        "page_title": "Random Picks - Watchlazy",
+        "page_description": "Discover random movie picks. Refresh the page for new recommendations!",
+        "canonical_path": "/random-picks",
+        "active_tab": "random",
+    })
+
+
 @app.get("/for-me")
 async def for_me_page(request: Request):
     """SSR personalized recommendations page."""
@@ -918,7 +1075,10 @@ async def sitemap():
     # Static pages
     static_pages = [
         ("/", "1.0", "daily"),
+        ("/free-movies", "0.95", "daily"),
+        ("/upcoming", "0.9", "daily"),
         ("/top-rated", "0.9", "daily"),
+        ("/random-picks", "0.8", "daily"),
         ("/browse", "0.9", "daily"),
         ("/for-me", "0.8", "daily"),
     ]
@@ -1638,7 +1798,7 @@ async def curated_list_page(
 @app.post("/refresh")
 async def refresh_cache(
     request: Request,
-    limit: int = Query(500, ge=100, le=1000, description="Number of movies to fetch"),
+    limit: int = Query(500, ge=100, le=5000, description="Number of movies to fetch"),
 ):
     """Force refresh the movie cache and sync to MongoDB. Requires admin key."""
     if not verify_admin_key(request):

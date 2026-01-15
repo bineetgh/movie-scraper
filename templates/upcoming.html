@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Upcoming Movies - Watchlazy",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/upcoming"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="upcoming-section">
+    <div class="upcoming-header">
+        <h1>
+            <span class="upcoming-icon">📅</span>
+            Upcoming Releases
+            <span class="movie-count">{{ movies | length }} movies</span>
+        </h1>
+        <p class="page-subtitle">Discover movies coming soon to theaters and streaming platforms in India</p>
+    </div>
+
+    <div class="upcoming-grid">
+        {% for movie in movies %}
+        <a href="/upcoming/{{ movie.tmdb_id }}" class="upcoming-card-link">
+        <article class="upcoming-card" itemscope itemtype="https://schema.org/Movie">
+            <div class="upcoming-poster">
+                {% if movie.poster_url %}
+                <img src="{{ movie.poster_url }}"
+                     alt="{{ movie.title }} poster"
+                     itemprop="image"
+                     loading="lazy">
+                {% else %}
+                <div class="poster-placeholder">
+                    <span>🎬</span>
+                </div>
+                {% endif %}
+
+                {% if movie.release_date %}
+                {% set months = {'01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Aug', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dec'} %}
+                <div class="release-date-badge">
+                    <span class="date-month">{{ months.get(movie.release_date[5:7], '') }}</span>
+                    <span class="date-day">{{ movie.release_date[8:10] | int }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="upcoming-info">
+                <h3 class="upcoming-title" itemprop="name">{{ movie.title }}</h3>
+
+                <div class="upcoming-meta">
+                    {% if movie.release_date %}
+                    <span class="release-full-date" itemprop="datePublished">
+                        {{ movie.release_date }}
+                    </span>
+                    {% endif %}
+                    {% if movie.rating and movie.rating > 0 %}
+                    <span class="upcoming-rating">{{ "%.1f"|format(movie.rating) }} TMDB</span>
+                    {% endif %}
+                </div>
+
+                {% if movie.genres %}
+                <div class="upcoming-genres">
+                    {% for genre in movie.genres[:3] %}
+                    <span class="genre-chip">{{ genre }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if movie.synopsis %}
+                <p class="upcoming-synopsis" itemprop="description">
+                    {{ movie.synopsis[:150] }}{% if movie.synopsis | length > 150 %}...{% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </article>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if movies | length == 0 %}
+    <div class="no-results">
+        <div class="no-results-icon">📅</div>
+        <h3>No upcoming movies found</h3>
+        <p>Check back soon for new release announcements!</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

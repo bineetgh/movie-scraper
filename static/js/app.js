@@ -63,53 +63,79 @@
         }
     }
 
-    // ========== Reactions ==========
+    // ========== Star Ratings ==========
     window.getReactions = function() {
         try {
-            return JSON.parse(localStorage.getItem(REACTIONS_KEY) || '{}');
+            const data = JSON.parse(localStorage.getItem(REACTIONS_KEY) || '{}');
+            // Migrate old reaction format to star ratings
+            let needsSave = false;
+            Object.keys(data).forEach(function(slug) {
+                if (data[slug].reaction && !data[slug].rating) {
+                    // Convert old reactions to star ratings
+                    const reactionToStars = {
+                        'loved': 5,
+                        'liked': 4,
+                        'disliked': 2
+                    };
+                    data[slug].rating = reactionToStars[data[slug].reaction] || 3;
+                    delete data[slug].reaction;
+                    needsSave = true;
+                }
+            });
+            if (needsSave) {
+                localStorage.setItem(REACTIONS_KEY, JSON.stringify(data));
+            }
+            return data;
         } catch (e) {
             return {};
         }
     };
 
-    window.getReaction = function(movieSlug) {
+    window.getRating = function(movieSlug) {
         const reactions = window.getReactions();
-        return reactions[movieSlug] ? reactions[movieSlug].reaction : null;
+        return reactions[movieSlug] ? reactions[movieSlug].rating : 0;
     };
 
-    window.setReaction = function(movieSlug, reaction) {
+    window.setRating = function(movieSlug, stars) {
         const reactions = window.getReactions();
 
-        if (reactions[movieSlug] && reactions[movieSlug].reaction === reaction) {
+        if (reactions[movieSlug] && reactions[movieSlug].rating === stars) {
+            // Clicking same rating removes it
             delete reactions[movieSlug];
-            window.showToast('Reaction removed', '');
+            window.showToast('Rating removed', '');
         } else {
             reactions[movieSlug] = {
-                reaction: reaction,
+                rating: stars,
                 timestamp: Date.now(),
                 genres: getMovieGenres(movieSlug)
             };
 
-            var messages = {
-                'loved': 'Marked as loved!',
-                'liked': 'Marked as liked',
-                'disliked': 'Marked as disliked'
+            const messages = {
+                1: 'Rated 1 star',
+                2: 'Rated 2 stars',
+                3: 'Rated 3 stars',
+                4: 'Rated 4 stars',
+                5: 'Rated 5 stars'
             };
-            window.showToast(messages[reaction] || 'Reaction saved', 'success');
+            window.showToast(messages[stars] || 'Rating saved', 'success');
         }
 
         localStorage.setItem(REACTIONS_KEY, JSON.stringify(reactions));
-        updateReactionUI(movieSlug);
+        updateRatingUI(movieSlug);
     };
 
-    function updateReactionUI(movieSlug) {
+    function updateRatingUI(movieSlug) {
         const card = document.querySelector('[data-movie-slug="' + movieSlug + '"]');
         if (card) {
-            const currentReaction = window.getReaction(movieSlug);
-            card.querySelectorAll('.reaction-btn').forEach(function(btn) {
-                const btnReaction = btn.dataset.reaction;
-                btn.classList.toggle('active', btnReaction === currentReaction);
-            });
+            const rating = window.getRating(movieSlug);
+            const starContainer = card.querySelector('.star-rating');
+            if (starContainer) {
+                starContainer.querySelectorAll('.star').forEach(function(star) {
+                    const value = parseInt(star.dataset.value);
+                    star.classList.toggle('filled', value <= rating);
+                    star.textContent = value <= rating ? '\u2605' : '\u2606';
+                });
+            }
         }
     }
 
@@ -127,7 +153,7 @@
         const watched = window.getWatchedMovies();
         const reactions = window.getReactions();
 
-        document.querySelectorAll('.movie-card[data-movie-slug]').forEach(function(card) {
+        document.querySelectorAll('.movie-card[data-movie-slug], .free-movie-card[data-movie-slug]').forEach(function(card) {
             const slug = card.dataset.movieSlug;
 
             // Set watched state
@@ -137,11 +163,17 @@
                 if (btn) btn.classList.add('active');
             }
 
-            // Set reaction state
-            if (reactions[slug]) {
-                const reaction = reactions[slug].reaction;
-                const btn = card.querySelector('.reaction-btn[data-reaction="' + reaction + '"]');
-                if (btn) btn.classList.add('active');
+            // Set star rating state
+            if (reactions[slug] && reactions[slug].rating) {
+                const rating = reactions[slug].rating;
+                const starContainer = card.querySelector('.star-rating');
+                if (starContainer) {
+                    starContainer.querySelectorAll('.star').forEach(function(star) {
+                        const value = parseInt(star.dataset.value);
+                        star.classList.toggle('filled', value <= rating);
+                        star.textContent = value <= rating ? '\u2605' : '\u2606';
+                    });
+                }
             }
         });
     }
@@ -182,11 +214,13 @@
             watchedSlugs[slug] = true;
         });
 
-        // Score genres based on reactions
+        // Score genres based on star ratings
         Object.keys(reactions).forEach(function(slug) {
             const data = reactions[slug];
             const genres = data.genres || [];
-            const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
+            // Convert rating to weight: 5 stars = 3, 4 stars = 2, 3 stars = 1, 1-2 stars = -1
+            const rating = data.rating || 0;
+            const weight = rating >= 5 ? 3 : (rating >= 4 ? 2 : (rating >= 3 ? 1 : -1));
 
             genres.forEach(function(genre) {
                 genreScores[genre] = (genreScores[genre] || 0) + weight;
@@ -222,13 +256,13 @@
             .slice(0, 5);
 
         const watchedCount = Object.keys(watched).length;
-        const lovedCount = Object.keys(reactions).filter(function(slug) {
-            return reactions[slug].reaction === 'loved';
+        const ratedCount = Object.keys(reactions).filter(function(slug) {
+            return reactions[slug].rating >= 4;
         }).length;
 
         var summaryHtml = '<div class="preference-summary">' +
             '<div class="pref-item"><span>Watched</span><span class="count">' + watchedCount + '</span></div>' +
-            '<div class="pref-item"><span>Loved</span><span class="count">' + lovedCount + '</span></div>';
+            '<div class="pref-item"><span>Highly Rated</span><span class="count">' + ratedCount + '</span></div>';
 
         topGenres.slice(0, 3).forEach(function(genre) {
             summaryHtml += '<div class="pref-item"><span>' + genre + '</span></div>';
@@ -357,16 +391,16 @@
             html += '<span class="service-tag service-tag-sub">Subscription</span>';
         }
         html += '</div></div></a>' +
-            '<div class="movie-actions-bar">' +
-            '<button class="watched-btn" onclick="event.preventDefault(); toggleWatched(\'' + movie.slug + '\')" title="Mark as watched">' +
-            '<span class="watched-icon">👁</span>' +
+            '<button class="watched-btn" onclick="event.preventDefault(); event.stopPropagation(); toggleWatched(\'' + movie.slug + '\')" title="Mark as watched">' +
             '<span class="watched-text">Watched</span>' +
             '</button>' +
-            '<div class="reaction-btns">' +
-            '<button class="reaction-btn" data-reaction="loved" onclick="event.preventDefault(); setReaction(\'' + movie.slug + '\', \'loved\')" title="Loved it">😍</button>' +
-            '<button class="reaction-btn" data-reaction="liked" onclick="event.preventDefault(); setReaction(\'' + movie.slug + '\', \'liked\')" title="Liked it">👍</button>' +
-            '<button class="reaction-btn" data-reaction="disliked" onclick="event.preventDefault(); setReaction(\'' + movie.slug + '\', \'disliked\')" title="Didn\'t like it">👎</button>' +
-            '</div></div></article>';
+            '<div class="star-rating">' +
+            '<span class="star" data-value="1" onclick="event.preventDefault(); event.stopPropagation(); setRating(\'' + movie.slug + '\', 1)" title="1 star">☆</span>' +
+            '<span class="star" data-value="2" onclick="event.preventDefault(); event.stopPropagation(); setRating(\'' + movie.slug + '\', 2)" title="2 stars">☆</span>' +
+            '<span class="star" data-value="3" onclick="event.preventDefault(); event.stopPropagation(); setRating(\'' + movie.slug + '\', 3)" title="3 stars">☆</span>' +
+            '<span class="star" data-value="4" onclick="event.preventDefault(); event.stopPropagation(); setRating(\'' + movie.slug + '\', 4)" title="4 stars">☆</span>' +
+            '<span class="star" data-value="5" onclick="event.preventDefault(); event.stopPropagation(); setRating(\'' + movie.slug + '\', 5)" title="5 stars">☆</span>' +
+            '</div></article>';
 
         return html;
     }

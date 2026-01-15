@@ -1,0 +1,99 @@
+<article class="movie-card free-movie-card" itemscope itemtype="https://schema.org/Movie" data-movie-slug="{{ movie.slug }}" data-genres="{{ movie.genres | join(',') }}">
+    <div class="poster-container">
+        {% if movie.poster_url %}
+        <img src="{{ movie.poster_url }}"
+             alt="{{ movie.title }} poster"
+             itemprop="image"
+             loading="lazy"
+             class="movie-poster">
+        {% else %}
+        <div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">
+            🎬
+        </div>
+        {% endif %}
+
+        <!-- Play Button Overlay -->
+        {% set archive_url = namespace(value=none) %}
+        {% set first_free_url = namespace(value=none) %}
+        {% set provider_name = namespace(value='') %}
+
+        {% for offer in movie.streaming.unique_free_offers %}
+            {% if 'archive.org' in offer.url and not archive_url.value %}
+                {% set archive_url.value = offer.url %}
+            {% endif %}
+            {% if not first_free_url.value and offer.url %}
+                {% set first_free_url.value = offer.url %}
+                {% set provider_name.value = offer.provider_name %}
+            {% endif %}
+        {% endfor %}
+
+        {% if not first_free_url.value %}
+            {% for url in movie.source_urls %}
+                {% if 'archive.org' in url and not archive_url.value %}
+                    {% set archive_url.value = url %}
+                {% endif %}
+                {% if not first_free_url.value %}
+                    {% set first_free_url.value = url %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        {% if archive_url.value %}
+        <!-- Direct play button for Internet Archive -->
+        <a href="{{ archive_url.value }}" target="_blank" rel="noopener" class="play-overlay play-overlay-direct" title="Play on Internet Archive">
+            <div class="play-btn-circle">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+            </div>
+            <span class="play-label">Play Free</span>
+        </a>
+        {% elif first_free_url.value %}
+        <!-- Click to watch button for external services -->
+        <a href="{{ first_free_url.value }}" target="_blank" rel="noopener" class="play-overlay play-overlay-external" title="Watch on {{ provider_name.value or 'streaming service' }}">
+            <div class="watch-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                <span>Click to Watch</span>
+            </div>
+        </a>
+        {% endif %}
+
+    </div>
+
+    <a href="{{ movie.canonical_url }}" class="movie-info-link">
+        <div class="movie-info">
+            <h3 class="movie-title" itemprop="name">{{ movie.title }}</h3>
+            <div class="movie-meta">
+                {% if movie.year %}<span itemprop="datePublished">{{ movie.year }}</span>{% endif %}
+                {% if movie.rating %}<span class="movie-rating" itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating"><span itemprop="ratingValue">{{ movie.rating }}</span> IMDb</span>{% endif %}
+            </div>
+            {% if movie.synopsis %}
+            <p class="movie-synopsis" itemprop="description">{{ movie.synopsis[:100] }}{% if movie.synopsis | length > 100 %}...{% endif %}</p>
+            {% endif %}
+            <div class="movie-services">
+                <span class="service-tag service-tag-free">Free</span>
+                {% if provider_name.value %}
+                <span class="provider-badge">{{ provider_name.value }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+
+    <!-- Watched Button (on poster) -->
+    <button class="watched-btn" onclick="event.preventDefault(); event.stopPropagation(); toggleWatched('{{ movie.slug }}')" title="Mark as watched">
+        <span class="watched-text">Watched</span>
+    </button>
+
+    <!-- Star Rating -->
+    <div class="star-rating">
+        <span class="star" data-value="1" onclick="event.preventDefault(); event.stopPropagation(); setRating('{{ movie.slug }}', 1)" title="1 star">☆</span>
+        <span class="star" data-value="2" onclick="event.preventDefault(); event.stopPropagation(); setRating('{{ movie.slug }}', 2)" title="2 stars">☆</span>
+        <span class="star" data-value="3" onclick="event.preventDefault(); event.stopPropagation(); setRating('{{ movie.slug }}', 3)" title="3 stars">☆</span>
+        <span class="star" data-value="4" onclick="event.preventDefault(); event.stopPropagation(); setRating('{{ movie.slug }}', 4)" title="4 stars">☆</span>
+        <span class="star" data-value="5" onclick="event.preventDefault(); event.stopPropagation(); setRating('{{ movie.slug }}', 5)" title="5 stars">☆</span>
+    </div>
+</article>

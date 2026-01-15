@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Free Movies - Watchlazy",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/free-movies"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="free-movies-section">
+    <div class="free-movies-header">
+        <div class="header-content">
+            <h1>
+                <span class="free-badge">FREE</span>
+                Free Movies to Watch
+                <span class="movie-count">{{ total_movies }} movies</span>
+            </h1>
+            <p class="page-subtitle">Watch these movies for free - no subscription required. Click play to start watching!</p>
+        </div>
+    </div>
+
+    <div class="movies-grid free-movies-grid">
+        {% for movie in movies %}
+        {% include "components/free_movie_card.html" %}
+        {% endfor %}
+    </div>
+
+    {% if movies | length == 0 %}
+    <div class="no-results">
+        <div class="no-results-icon">🎬</div>
+        <h3>No free movies found</h3>
+        <p>Check back soon for new free content!</p>
+    </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="Pagination">
+        {% if page > 1 %}
+        <a href="/free-movies?page={{ page - 1 }}">&laquo; Prev</a>
+        {% else %}
+        <span class="disabled">&laquo; Prev</span>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="current">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+            <a href="/free-movies?page={{ p }}">{{ p }}</a>
+            {% elif p == 4 and page > 5 %}
+            <span>...</span>
+            {% elif p == total_pages - 2 and page < total_pages - 4 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/free-movies?page={{ page + 1 }}">Next &raquo;</a>
+        {% else %}
+        <span class="disabled">Next &raquo;</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

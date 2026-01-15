@@ -64,6 +64,73 @@ class TMDBClient(BaseScraper):
             print(f"TMDB details error for {tmdb_id}: {e}")
         return None
 
+    def get_upcoming_movie_full(self, tmdb_id: int) -> Optional[Movie]:
+        """Get full movie details for an upcoming movie."""
+        if not self.is_available:
+            return None
+
+        data = self.get_movie_details(tmdb_id)
+        if not data:
+            return None
+
+        # Parse year from release date
+        release_date = data.get("release_date", "")
+        year = None
+        if release_date and len(release_date) >= 4:
+            try:
+                year = int(release_date[:4])
+            except ValueError:
+                pass
+
+        # Get genre names
+        genres = [g.get("name", "") for g in data.get("genres", [])]
+
+        movie = Movie(
+            title=data.get("title", "Unknown"),
+            year=year,
+            tmdb_id=tmdb_id,
+            imdb_id=data.get("external_ids", {}).get("imdb_id"),
+            synopsis=data.get("overview", ""),
+            rating=data.get("vote_average"),
+            vote_count=data.get("vote_count"),
+            popularity=data.get("popularity"),
+            release_date=release_date,
+            genres=genres,
+            original_language=data.get("original_language"),
+            runtime_minutes=data.get("runtime"),
+            tagline=data.get("tagline"),
+        )
+
+        # Add poster
+        if data.get("poster_path"):
+            movie.poster_url = f"{self.IMAGE_BASE_URL}/w342{data['poster_path']}"
+            movie.tmdb_poster_url = f"{self.IMAGE_BASE_URL}/w780{data['poster_path']}"
+
+        # Add backdrop
+        if data.get("backdrop_path"):
+            movie.backdrop_url = f"{self.IMAGE_BASE_URL}/w1280{data['backdrop_path']}"
+
+        # Extract cast
+        credits = data.get("credits", {})
+        if credits.get("cast"):
+            movie.cast = [c["name"] for c in credits["cast"][:10]]
+
+        # Extract director
+        if credits.get("crew"):
+            for crew in credits["crew"]:
+                if crew.get("job") == "Director":
+                    movie.director = crew["name"]
+                    break
+
+        # Extract trailer URL
+        videos = data.get("videos", {}).get("results", [])
+        for video in videos:
+            if video.get("type") == "Trailer" and video.get("site") == "YouTube":
+                movie.trailer_url = f"https://www.youtube.com/watch?v={video['key']}"
+                break
+
+        return movie
+
     def enrich_movie(self, movie: Movie) -> Movie:
         """Enrich a movie with TMDB data."""
         if not self.is_available:
@@ -124,6 +191,95 @@ class TMDBClient(BaseScraper):
                     break
 
         return movie
+
+    def fetch_upcoming(self, region: str = "IN", pages: int = 3) -> List[Movie]:
+        """Fetch upcoming movies from TMDB."""
+        if not self.is_available:
+            return []
+
+        movies = []
+        seen_ids = set()
+
+        for page in range(1, pages + 1):
+            try:
+                response = self.get(
+                    f"{self.BASE_URL}/movie/upcoming",
+                    params={
+                        "api_key": self.api_key,
+                        "language": "en-US",
+                        "region": region,
+                        "page": page,
+                    }
+                )
+                data = response.json()
+                results = data.get("results", [])
+
+                for item in results:
+                    tmdb_id = item.get("id")
+                    if tmdb_id in seen_ids:
+                        continue
+                    seen_ids.add(tmdb_id)
+
+                    release_date = item.get("release_date", "")
+                    # Skip if no release date or already released
+                    if not release_date:
+                        continue
+
+                    # Parse year from release date
+                    year = None
+                    if release_date and len(release_date) >= 4:
+                        try:
+                            year = int(release_date[:4])
+                        except ValueError:
+                            pass
+
+                    # Get genre names from genre_ids
+                    genres = self._get_genre_names(item.get("genre_ids", []))
+
+                    movie = Movie(
+                        title=item.get("title", "Unknown"),
+                        year=year,
+                        tmdb_id=tmdb_id,
+                        synopsis=item.get("overview", ""),
+                        rating=item.get("vote_average"),
+                        vote_count=item.get("vote_count"),
+                        popularity=item.get("popularity"),
+                        release_date=release_date,
+                        genres=genres,
+                        original_language=item.get("original_language"),
+                    )
+
+                    # Add poster
+                    if item.get("poster_path"):
+                        movie.poster_url = f"{self.IMAGE_BASE_URL}/w342{item['poster_path']}"
+                        movie.tmdb_poster_url = f"{self.IMAGE_BASE_URL}/w780{item['poster_path']}"
+
+                    # Add backdrop
+                    if item.get("backdrop_path"):
+                        movie.backdrop_url = f"{self.IMAGE_BASE_URL}/w1280{item['backdrop_path']}"
+
+                    movies.append(movie)
+
+                print(f"Fetched {len(results)} upcoming movies from page {page}")
+
+            except Exception as e:
+                print(f"TMDB upcoming fetch error (page {page}): {e}")
+
+        # Sort by release date
+        movies.sort(key=lambda m: m.release_date or "9999-99-99")
+        print(f"Fetched {len(movies)} upcoming movies total")
+        return movies
+
+    def _get_genre_names(self, genre_ids: List[int]) -> List[str]:
+        """Convert TMDB genre IDs to names."""
+        genre_map = {
+            28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy",
+            80: "Crime", 99: "Documentary", 18: "Drama", 10751: "Family",
+            14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music",
+            9648: "Mystery", 10749: "Romance", 878: "Sci-Fi", 10770: "TV Movie",
+            53: "Thriller", 10752: "War", 37: "Western",
+        }
+        return [genre_map.get(gid, "") for gid in genre_ids if gid in genre_map]
 
     def fetch_movies(self, limit: Optional[int] = None) -> List[Movie]:
         """Not used - TMDB is for enrichment only."""

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, date
 
 from dataclasses_json import dataclass_json
 
@@ -38,6 +38,7 @@ class Movie:
     original_language: Optional[str] = None
     popularity: Optional[float] = None
     vote_count: Optional[int] = None
+    release_date: Optional[str] = None  # ISO format: YYYY-MM-DD
 
     # Structured streaming offers
     streaming: StreamingAvailability = field(default_factory=StreamingAvailability)
@@ -113,6 +114,7 @@ class Movie:
             original_language=self.original_language or other.original_language,
             popularity=self.popularity or other.popularity,
             vote_count=self.vote_count or other.vote_count,
+            release_date=self.release_date or other.release_date,
             streaming=merged_streaming,
         )
 
@@ -142,6 +144,7 @@ class Movie:
             "original_language": self.original_language,
             "popularity": self.popularity,
             "vote_count": self.vote_count,
+            "release_date": self.release_date,
             "streaming": self.streaming.to_document(),
             # Denormalized fields for efficient queries
             "streaming_providers": list(set(self.streaming_services + self.streaming.all_providers)),
@@ -195,5 +198,6 @@ class Movie:
             original_language=doc.get("original_language"),
             popularity=doc.get("popularity"),
             vote_count=doc.get("vote_count"),
+            release_date=doc.get("release_date"),
             streaming=StreamingAvailability.from_document(doc.get("streaming", {})),
         )

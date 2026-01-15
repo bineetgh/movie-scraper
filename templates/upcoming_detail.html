@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Movie",
+    "name": {{ movie.title | tojson }},
+    "description": {{ (movie.synopsis if movie.synopsis else 'Upcoming movie: ' + movie.title) | tojson }},
+    {% if movie.release_date %}
+    "datePublished": "{{ movie.release_date }}",
+    {% endif %}
+    {% if movie.director %}
+    "director": {
+        "@type": "Person",
+        "name": {{ movie.director | tojson }}
+    },
+    {% endif %}
+    {% if movie.cast %}
+    "actor": [
+        {% for actor in movie.cast[:5] %}
+        {
+            "@type": "Person",
+            "name": {{ actor | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    {% if movie.genres %}
+    "genre": {{ movie.genres | tojson }},
+    {% endif %}
+    {% if movie.rating %}
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ movie.rating }}",
+        "bestRating": "10",
+        "worstRating": "1"
+    },
+    {% endif %}
+    {% if movie.runtime_minutes %}
+    "duration": "PT{{ movie.runtime_minutes }}M",
+    {% endif %}
+    {% if movie.poster_url %}
+    "image": {{ movie.poster_url | tojson }},
+    {% endif %}
+    "url": {{ (base_url + '/upcoming/' + movie.tmdb_id|string) | tojson }}
+}
+</script>
+
+<!-- BreadcrumbList structured data -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ base_url }}/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Upcoming",
+            "item": "{{ base_url }}/upcoming"
+        },
+        {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "{{ movie.title }}",
+            "item": "{{ base_url }}/upcoming/{{ movie.tmdb_id }}"
+        }
+    ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb Navigation -->
+<nav aria-label="Breadcrumb" class="breadcrumb">
+    <ol>
+        <li><a href="/">Home</a></li>
+        <li><a href="/upcoming">Upcoming</a></li>
+        <li><span>{{ movie.title }}</span></li>
+    </ol>
+</nav>
+
+<article class="movie-detail upcoming-movie-detail">
+    <div class="movie-detail-hero"{% if movie.backdrop_url %} style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.9)), url('{{ movie.backdrop_url }}'); background-size: cover; background-position: center;"{% endif %}>
+        {% if movie.tmdb_poster_url or movie.poster_url %}
+        <img src="{{ movie.tmdb_poster_url or movie.poster_url }}"
+             alt="{{ movie.title }} poster"
+             class="movie-poster-large"
+             loading="eager">
+        {% endif %}
+
+        <div class="movie-detail-info">
+            <!-- Coming Soon Badge -->
+            <div class="coming-soon-badge">
+                <span class="badge-icon">📅</span>
+                <span class="badge-text">Coming Soon</span>
+            </div>
+
+            <h1>{{ movie.title }}{% if movie.year %} ({{ movie.year }}){% endif %}</h1>
+
+            {% if movie.tagline %}
+            <p class="tagline">"{{ movie.tagline }}"</p>
+            {% endif %}
+
+            <div class="movie-meta">
+                {% if movie.release_date %}
+                <span class="release-date-highlight">
+                    <strong>Release:</strong> {{ release_date_formatted }}
+                </span>
+                {% endif %}
+                {% if movie.runtime_minutes %}
+                <span>{{ movie.runtime_minutes }} min</span>
+                {% endif %}
+                {% if movie.rating and movie.rating > 0 %}
+                <span class="rating">{{ "%.1f"|format(movie.rating) }} TMDB</span>
+                {% endif %}
+                {% if movie.original_language %}
+                <span class="language">{{ movie.original_language | upper }}</span>
+                {% endif %}
+            </div>
+
+            <div class="movie-genres">
+                {% for genre in movie.genres %}
+                <span class="genre-tag">{{ genre }}</span>
+                {% endfor %}
+            </div>
+
+            {% if movie.director %}
+            <p class="director">Directed by <strong>{{ movie.director }}</strong></p>
+            {% endif %}
+
+            {% if movie.synopsis %}
+            <div class="synopsis-section">
+                <h3>Synopsis</h3>
+                <p class="synopsis">{{ movie.synopsis }}</p>
+            </div>
+            {% endif %}
+
+            {% if movie.cast %}
+            <div class="cast">
+                <h3>Cast</h3>
+                <div class="cast-list">
+                    {% for actor in movie.cast %}
+                    <span class="cast-member">{{ actor }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Trailer Section -->
+            {% if movie.trailer_url %}
+            <div class="trailer-section">
+                <h3>Watch Trailer</h3>
+                <a href="{{ movie.trailer_url }}" target="_blank" rel="noopener" class="trailer-btn">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span>Play Trailer on YouTube</span>
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- External Links -->
+            <div class="external-links">
+                <h3>More Information</h3>
+                <div class="link-buttons">
+                    {% if movie.tmdb_id %}
+                    <a href="https://www.themoviedb.org/movie/{{ movie.tmdb_id }}" target="_blank" rel="noopener" class="external-link-btn tmdb">
+                        <span>TMDB</span>
+                    </a>
+                    {% endif %}
+                    {% if movie.imdb_id %}
+                    <a href="https://www.imdb.com/title/{{ movie.imdb_id }}" target="_blank" rel="noopener" class="external-link-btn imdb">
+                        <span>IMDb</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+
+<div class="back-to-upcoming">
+    <a href="/upcoming" class="back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span>Back to Upcoming Releases</span>
+    </a>
+</div>
+{% endblock %}

@@ -37,7 +37,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Styles -->
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=3">
 
     <!-- Structured Data -->
     {% block structured_data %}{% endblock %}
@@ -64,7 +64,10 @@
                 </div>
                 <nav class="header-nav">
                     <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Home</a>
+                    <a href="/free-movies" class="nav-link {{ 'active' if active_tab == 'free' else '' }}">Free</a>
+                    <a href="/upcoming" class="nav-link {{ 'active' if active_tab == 'upcoming' else '' }}">Upcoming</a>
                     <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
+                    <a href="/random-picks" class="nav-link {{ 'active' if active_tab == 'random' else '' }}">Random</a>
                     <a href="/top-rated" class="nav-link {{ 'active' if active_tab == 'top-rated' else '' }}">Top Rated</a>
                     <div class="nav-dropdown">
                         <a href="/browse" class="nav-link {{ 'active' if active_tab == 'browse' else '' }}">
@@ -135,7 +138,10 @@
             <button class="close-nav" id="closeNav" aria-label="Close menu">&times;</button>
             <nav>
                 <a href="/" class="nav-link {{ 'active' if active_tab == 'home' else '' }}">Home</a>
+                <a href="/free-movies" class="nav-link {{ 'active' if active_tab == 'free' else '' }}">Free</a>
+                <a href="/upcoming" class="nav-link {{ 'active' if active_tab == 'upcoming' else '' }}">Upcoming</a>
                 <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
+                <a href="/random-picks" class="nav-link {{ 'active' if active_tab == 'random' else '' }}">Random</a>
                 <a href="/top-rated" class="nav-link {{ 'active' if active_tab == 'top-rated' else '' }}">Top Rated</a>
                 <div class="nav-dropdown">
                     <span class="nav-link">
@@ -195,7 +201,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=3"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
