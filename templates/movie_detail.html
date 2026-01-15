@@ -130,11 +130,11 @@
             <div class="streaming-availability">
                 <h3>Where to Watch</h3>
 
-                {% if movie.streaming.free_offers %}
+                {% if movie.streaming.unique_free_offers %}
                 <div class="offer-section offer-free">
                     <h4>Watch Free</h4>
                     <div class="offer-buttons">
-                        {% for offer in movie.streaming.free_offers %}
+                        {% for offer in movie.streaming.unique_free_offers %}
                         <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-free">
                             <span class="provider">{{ offer.provider_name }}</span>
                             <span class="type">{{ 'With Ads' if offer.monetization_type == 'ADS' else 'Free' }}</span>
@@ -144,11 +144,11 @@
                 </div>
                 {% endif %}
 
-                {% if movie.streaming.subscription_offers %}
+                {% if movie.streaming.unique_subscription_offers %}
                 <div class="offer-section offer-subscription">
                     <h4>Subscription</h4>
                     <div class="offer-buttons">
-                        {% for offer in movie.streaming.subscription_offers %}
+                        {% for offer in movie.streaming.unique_subscription_offers %}
                         <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-sub">
                             <span class="provider">{{ offer.provider_name }}</span>
                         </a>
@@ -157,11 +157,11 @@
                 </div>
                 {% endif %}
 
-                {% if movie.streaming.rent_offers %}
+                {% if movie.streaming.unique_rent_offers %}
                 <div class="offer-section offer-rent">
                     <h4>Rent</h4>
                     <div class="offer-buttons">
-                        {% for offer in movie.streaming.rent_offers %}
+                        {% for offer in movie.streaming.unique_rent_offers %}
                         <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-rent">
                             <span class="provider">{{ offer.provider_name }}</span>
                             {% if offer.price %}
@@ -173,11 +173,11 @@
                 </div>
                 {% endif %}
 
-                {% if movie.streaming.buy_offers %}
+                {% if movie.streaming.unique_buy_offers %}
                 <div class="offer-section offer-buy">
                     <h4>Buy</h4>
                     <div class="offer-buttons">
-                        {% for offer in movie.streaming.buy_offers %}
+                        {% for offer in movie.streaming.unique_buy_offers %}
                         <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-buy">
                             <span class="provider">{{ offer.provider_name }}</span>
                             {% if offer.price %}
@@ -189,7 +189,7 @@
                 </div>
                 {% endif %}
 
-                {% if not movie.streaming.free_offers and not movie.streaming.subscription_offers and not movie.streaming.rent_offers and not movie.streaming.buy_offers %}
+                {% if not movie.streaming.unique_free_offers and not movie.streaming.unique_subscription_offers and not movie.streaming.unique_rent_offers and not movie.streaming.unique_buy_offers %}
                 {% if movie.source_urls %}
                 <div class="offer-section">
                     <div class="offer-buttons">

@@ -69,6 +69,39 @@ class StreamingAvailability:
     rent_offers: List[StreamingOffer] = field(default_factory=list)
     buy_offers: List[StreamingOffer] = field(default_factory=list)
 
+    @staticmethod
+    def _dedupe_by_url(offers: List[StreamingOffer]) -> List[StreamingOffer]:
+        """Remove duplicate offers based on URL."""
+        seen_urls = set()
+        unique = []
+        for offer in offers:
+            if offer.url and offer.url not in seen_urls:
+                seen_urls.add(offer.url)
+                unique.append(offer)
+            elif not offer.url:
+                unique.append(offer)
+        return unique
+
+    @property
+    def unique_free_offers(self) -> List[StreamingOffer]:
+        """Get free offers deduplicated by URL."""
+        return self._dedupe_by_url(self.free_offers)
+
+    @property
+    def unique_subscription_offers(self) -> List[StreamingOffer]:
+        """Get subscription offers deduplicated by URL."""
+        return self._dedupe_by_url(self.subscription_offers)
+
+    @property
+    def unique_rent_offers(self) -> List[StreamingOffer]:
+        """Get rent offers deduplicated by URL."""
+        return self._dedupe_by_url(self.rent_offers)
+
+    @property
+    def unique_buy_offers(self) -> List[StreamingOffer]:
+        """Get buy offers deduplicated by URL."""
+        return self._dedupe_by_url(self.buy_offers)
+
     @property
     def is_free(self) -> bool:
         """Check if movie is available for free."""
