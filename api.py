@@ -125,6 +125,16 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 # Base URL for canonical URLs (set via environment variable in production)
 BASE_URL = os.getenv("BASE_URL", "https://watchlazy.com")
 
+# Genre mapping for backward compatibility with short codes
+GENRE_MAP = {
+    "act": "Action", "ani": "Animation", "cmy": "Comedy", "crm": "Crime",
+    "doc": "Documentary", "drm": "Drama", "eur": "European", "fml": "Family",
+    "fnt": "Fantasy", "hst": "History", "hrr": "Horror", "msc": "Music",
+    "rma": "Romance", "scf": "Sci-Fi", "spt": "Sport", "trl": "Thriller",
+    "war": "War", "wst": "Western",
+}
+GENRE_MAP_REVERSE = {v.lower(): k for k, v in GENRE_MAP.items()}
+
 # Jinja2 templates for SSR
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -616,6 +626,7 @@ async def movie_detail(request: Request, slug: str):
 async def browse(
     request: Request,
     service: Optional[str] = Query(None),
+    genre: Optional[str] = Query(None),
     min_rating: float = Query(0, ge=0, le=10),
     availability: str = Query("all"),
     letter: Optional[str] = Query(None),
@@ -641,6 +652,7 @@ async def browse(
             paginated, total, (_, services_list) = await asyncio.gather(
                 movie_repo.get_all(
                     service=service,
+                    genre=genre,
                     availability=avail_filter,
                     min_rating=min_rating_filter,
                     letter=letter,
@@ -650,6 +662,7 @@ async def browse(
                 ),
                 movie_repo.count(
                     service=service,
+                    genre=genre,
                     availability=avail_filter,
                     min_rating=min_rating_filter,
                     letter=letter,
@@ -669,6 +682,9 @@ async def browse(
         filtered = movies
         if service:
             filtered = [m for m in filtered if service in m.streaming_services]
+        if genre:
+            genre_short = GENRE_MAP_REVERSE.get(genre.lower(), "")
+            filtered = [m for m in filtered if genre in m.genres or genre_short in m.genres]
         if min_rating > 0:
             filtered = [m for m in filtered if m.rating and m.rating >= min_rating]
 
@@ -710,12 +726,24 @@ async def browse(
         "buy": "purchase"
     }
     avail_label = availability_labels.get(availability, "all")
-    desc_parts = [f"Browse {avail_label} movies"]
+    desc_parts = [f"Browse {avail_label}"]
+    if genre:
+        desc_parts.append(genre)
+    desc_parts.append("movies")
     if letter:
         desc_parts.append(f"starting with {letter}")
     if service:
         desc_parts.append(f"on {service}")
     page_desc = " ".join(desc_parts) + " on Watchlazy."
+
+    # Build page title
+    title_parts = ["Browse"]
+    if genre:
+        title_parts.append(genre)
+    if letter:
+        title_parts.append(letter)
+    title_parts.append("Movies - Watchlazy")
+    page_title = " ".join(title_parts)
 
     return templates.TemplateResponse("browse.html", {
         "request": request,
@@ -723,6 +751,7 @@ async def browse(
         "services": services_list,
         "curated_lists": curated_lists,
         "current_service": service,
+        "current_genre": genre,
         "min_rating": min_rating,
         "current_availability": availability,
         "current_letter": letter,
@@ -730,7 +759,7 @@ async def browse(
         "total_pages": total_pages,
         "total_movies": total,
         "base_url": BASE_URL,
-        "page_title": f"Browse {letter + ' ' if letter else ''}Movies - Watchlazy",
+        "page_title": page_title,
         "page_description": page_desc,
         "canonical_path": "/browse",
         "active_tab": "browse",
@@ -755,6 +784,9 @@ async def genre_page(
     if genre_name.lower() == "sci-fi":
         genre_display = "Sci-Fi"
 
+    # Get short code for backward compatibility
+    genre_short = GENRE_MAP_REVERSE.get(genre_display.lower(), "")
+
     if movie_repo is not None:
         try:
             paginated, total = await asyncio.gather(
@@ -769,10 +801,10 @@ async def genre_page(
         except Exception as e:
             logger.error(f"MongoDB query failed: {e}")
 
-    # Fallback to file cache
+    # Fallback to file cache - check both full name and short code
     if not paginated:
         movies = get_cached_movies()
-        filtered = [m for m in movies if genre_display in m.genres]
+        filtered = [m for m in movies if genre_display in m.genres or genre_short in m.genres]
         filtered = sorted(filtered, key=lambda m: m.rating or 0, reverse=True)
         total = len(filtered)
         paginated = filtered[skip:skip + per_page]
@@ -814,8 +846,14 @@ async def all_genres_page(request: Request):
             for genre in movie.genres:
                 genre_counts[genre] = genre_counts.get(genre, 0) + 1
 
+    # Convert short codes to full names and merge counts
+    converted_counts = {}
+    for genre, count in genre_counts.items():
+        full_name = GENRE_MAP.get(genre, genre)  # Use full name if available, else keep original
+        converted_counts[full_name] = converted_counts.get(full_name, 0) + count
+
     # Sort by count descending
-    sorted_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)
+    sorted_genres = sorted(converted_counts.items(), key=lambda x: x[1], reverse=True)
 
     return templates.TemplateResponse("genres.html", {
         "request": request,

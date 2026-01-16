@@ -17,7 +17,9 @@
     <!-- Page Header with Title and Filters -->
     <div class="browse-header">
         <h1>
-            {% if current_availability and current_availability != 'all' %}
+            {% if current_genre %}
+            {{ current_genre }} Movies
+            {% elif current_availability and current_availability != 'all' %}
             {{ current_availability | capitalize }} Movies
             {% elif current_service %}
             Movies on {{ current_service }}
@@ -76,6 +78,7 @@
     {% if current_availability and current_availability != 'all' %}{% set filter_params = filter_params + '&availability=' + current_availability %}{% endif %}
     {% if current_letter %}{% set filter_params = filter_params + '&letter=' + current_letter %}{% endif %}
     {% if current_service %}{% set filter_params = filter_params + '&service=' + current_service %}{% endif %}
+    {% if current_genre %}{% set filter_params = filter_params + '&genre=' + current_genre %}{% endif %}
     {% if min_rating %}{% set filter_params = filter_params + '&min_rating=' + min_rating|string %}{% endif %}
 
     <nav class="pagination" aria-label="Pagination">

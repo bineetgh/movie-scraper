@@ -17,6 +17,28 @@ class JustWatchScraper(BaseScraper):
     ALL_MONETIZATION_TYPES = ["FREE", "ADS", "FLATRATE", "RENT", "BUY"]
     FREE_MONETIZATION_TYPES = ["FREE", "ADS", "FLATRATE_AND_ADS"]
 
+    # Genre short code to full name mapping
+    GENRE_MAP = {
+        "act": "Action",
+        "ani": "Animation",
+        "cmy": "Comedy",
+        "crm": "Crime",
+        "doc": "Documentary",
+        "drm": "Drama",
+        "eur": "European",
+        "fml": "Family",
+        "fnt": "Fantasy",
+        "hst": "History",
+        "hrr": "Horror",
+        "msc": "Music",
+        "rma": "Romance",
+        "scf": "Sci-Fi",
+        "spt": "Sport",
+        "trl": "Thriller",
+        "war": "War",
+        "wst": "Western",
+    }
+
     # GraphQL query to fetch movies with pricing
     POPULAR_TITLES_QUERY = """
     query GetPopularTitles(
@@ -258,7 +280,7 @@ class JustWatchScraper(BaseScraper):
         return Movie(
             title=content.get("title", ""),
             year=content.get("originalReleaseYear"),
-            genres=[g.get("shortName", "") for g in content.get("genres", []) or []],
+            genres=[self.GENRE_MAP.get(g.get("shortName", ""), g.get("shortName", "").title()) for g in content.get("genres", []) or [] if g.get("shortName")],
             rating=content.get("scoring", {}).get("imdbScore") if content.get("scoring") else None,
             synopsis=content.get("shortDescription", "") or "",
             cast=cast[:10],
