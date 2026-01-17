@@ -383,3 +383,56 @@ class JustWatchScraper(BaseScraper):
         except Exception as e:
             print(f"Error searching JustWatch: {e}")
             return []
+
+    def search_and_match(
+        self,
+        title: str,
+        year: Optional[int] = None,
+        tmdb_id: Optional[int] = None,
+    ) -> Optional[Movie]:
+        """
+        Search JustWatch for a movie and return matching result with streaming data.
+
+        Matching priority:
+        1. TMDB ID match (if provided)
+        2. Exact title + year match
+        3. Normalized title + year match
+
+        Args:
+            title: Movie title to search for
+            year: Release year (optional but recommended)
+            tmdb_id: TMDB ID for exact matching (optional)
+
+        Returns:
+            Movie with streaming availability if found, None otherwise
+        """
+        results = self.search(title)
+        if not results:
+            return None
+
+        # Normalize title for comparison
+        def normalize(s: str) -> str:
+            return re.sub(r'[^\w\s]', '', s.lower()).strip()
+
+        normalized_title = normalize(title)
+
+        for movie in results:
+            # Priority 1: Match by TMDB ID
+            if tmdb_id and movie.tmdb_id == tmdb_id:
+                return movie
+
+            # Priority 2: Exact title + year match
+            if movie.title == title and (year is None or movie.year == year):
+                return movie
+
+            # Priority 3: Normalized title + year match
+            if normalize(movie.title) == normalized_title and (year is None or movie.year == year):
+                return movie
+
+        # Fallback: Return first result if year matches (loose match)
+        if year:
+            for movie in results:
+                if movie.year == year:
+                    return movie
+
+        return None

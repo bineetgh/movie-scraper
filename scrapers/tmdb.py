@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Generator, Callable
 
 from scrapers.base import BaseScraper
 from models.movie import Movie
@@ -280,6 +280,142 @@ class TMDBClient(BaseScraper):
             53: "Thriller", 10752: "War", 37: "Western",
         }
         return [genre_map.get(gid, "") for gid in genre_ids if gid in genre_map]
+
+    def fetch_discover(
+        self,
+        total_movies: int = 5000,
+        sort_by: str = "popularity.desc",
+        vote_count_gte: int = 100,
+        release_date_gte: Optional[str] = None,
+        release_date_lte: Optional[str] = None,
+        with_original_language: Optional[str] = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Generator[List[Movie], None, None]:
+        """
+        Fetch movies from TMDB Discover API using generator pattern.
+
+        Args:
+            total_movies: Maximum number of movies to fetch (max 10000)
+            sort_by: Sort order (popularity.desc, vote_average.desc, release_date.desc)
+            vote_count_gte: Minimum vote count filter
+            release_date_gte: Start date filter (YYYY-MM-DD)
+            release_date_lte: End date filter (YYYY-MM-DD)
+            with_original_language: Filter by language (e.g., 'en', 'hi')
+            progress_callback: Optional callback(fetched, total) for progress updates
+
+        Yields:
+            Batches of Movie objects (20 per batch)
+        """
+        if not self.is_available:
+            print("TMDB API key not configured")
+            return
+
+        seen_ids = set()
+        movies_fetched = 0
+        page = 1
+        # TMDB allows max 500 pages (10000 movies)
+        max_pages = min((total_movies + 19) // 20, 500)
+
+        print(f"Starting TMDB Discover fetch: target={total_movies}, sort={sort_by}")
+
+        while page <= max_pages and movies_fetched < total_movies:
+            try:
+                params = {
+                    "api_key": self.api_key,
+                    "language": "en-US",
+                    "sort_by": sort_by,
+                    "vote_count.gte": vote_count_gte,
+                    "page": page,
+                    "include_adult": "false",
+                    "include_video": "false",
+                }
+
+                if release_date_gte:
+                    params["primary_release_date.gte"] = release_date_gte
+                if release_date_lte:
+                    params["primary_release_date.lte"] = release_date_lte
+                if with_original_language:
+                    params["with_original_language"] = with_original_language
+
+                response = self.get(f"{self.BASE_URL}/discover/movie", params=params)
+                data = response.json()
+                results = data.get("results", [])
+
+                if not results:
+                    print(f"No more results at page {page}")
+                    break
+
+                batch = []
+                for item in results:
+                    if movies_fetched >= total_movies:
+                        break
+
+                    tmdb_id = item.get("id")
+                    if tmdb_id in seen_ids:
+                        continue
+                    seen_ids.add(tmdb_id)
+
+                    movie = self._parse_discover_result(item)
+                    batch.append(movie)
+                    movies_fetched += 1
+
+                if batch:
+                    yield batch
+
+                if progress_callback:
+                    progress_callback(movies_fetched, total_movies)
+
+                if page % 10 == 0:
+                    print(f"TMDB Discover: fetched {movies_fetched}/{total_movies} movies (page {page})")
+
+                page += 1
+
+            except Exception as e:
+                print(f"TMDB Discover error at page {page}: {e}")
+                # Continue to next page on error
+                page += 1
+
+        print(f"TMDB Discover complete: fetched {movies_fetched} movies")
+
+    def _parse_discover_result(self, item: Dict) -> Movie:
+        """Parse a single Discover API result into a Movie object."""
+        tmdb_id = item.get("id")
+        release_date = item.get("release_date", "")
+
+        # Parse year from release date
+        year = None
+        if release_date and len(release_date) >= 4:
+            try:
+                year = int(release_date[:4])
+            except ValueError:
+                pass
+
+        # Get genre names from genre_ids
+        genres = self._get_genre_names(item.get("genre_ids", []))
+
+        movie = Movie(
+            title=item.get("title", "Unknown"),
+            year=year,
+            tmdb_id=tmdb_id,
+            synopsis=item.get("overview", ""),
+            rating=item.get("vote_average"),
+            vote_count=item.get("vote_count"),
+            popularity=item.get("popularity"),
+            release_date=release_date,
+            genres=genres,
+            original_language=item.get("original_language"),
+        )
+
+        # Add poster
+        if item.get("poster_path"):
+            movie.poster_url = f"{self.IMAGE_BASE_URL}/w342{item['poster_path']}"
+            movie.tmdb_poster_url = f"{self.IMAGE_BASE_URL}/w780{item['poster_path']}"
+
+        # Add backdrop
+        if item.get("backdrop_path"):
+            movie.backdrop_url = f"{self.IMAGE_BASE_URL}/w1280{item['backdrop_path']}"
+
+        return movie
 
     def fetch_movies(self, limit: Optional[int] = None) -> List[Movie]:
         """Not used - TMDB is for enrichment only."""
