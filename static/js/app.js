@@ -486,12 +486,37 @@
         });
     }
 
+    // ========== Google Analytics Event Tracking ==========
+    function initMovieClickTracking() {
+        document.addEventListener('click', function(e) {
+            // Find if click was on a movie card link
+            const movieCard = e.target.closest('.movie-card, .free-movie-card');
+            if (!movieCard) return;
+
+            const link = e.target.closest('a');
+            if (!link) return;
+
+            const slug = movieCard.dataset.movieSlug;
+            const titleEl = movieCard.querySelector('.movie-title');
+            const title = titleEl ? titleEl.textContent : slug;
+
+            // Send event to Google Analytics
+            if (typeof gtag === 'function') {
+                gtag('event', 'movie_click', {
+                    movie_slug: slug,
+                    movie_title: title
+                });
+            }
+        });
+    }
+
     // ========== Initialize on DOM Ready ==========
     function init() {
         initUserStates();
         initForMePage();
         initMobileNav();
         initMobileSearch();
+        initMovieClickTracking();
     }
 
     if (document.readyState === 'loading') {
