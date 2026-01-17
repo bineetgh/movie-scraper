@@ -214,6 +214,48 @@ class MovieRepository:
         )
         return result.upserted_count + result.modified_count
 
+    async def insert_new_movies_only(self, movies: List[Movie]) -> Tuple[int, int]:
+        """
+        Insert only new movies, skipping existing ones.
+        Returns tuple of (inserted_count, skipped_count).
+        """
+        if not movies:
+            return 0, 0
+
+        # Get existing slugs in a single query
+        slugs = [movie.slug for movie in movies]
+        existing_cursor = self.movies.find(
+            {"_id": {"$in": slugs}},
+            {"_id": 1}
+        )
+        existing_slugs = {doc["_id"] async for doc in existing_cursor}
+
+        # Filter to only new movies
+        new_movies = [m for m in movies if m.slug not in existing_slugs]
+        skipped_count = len(movies) - len(new_movies)
+
+        if not new_movies:
+            logger.info(f"No new movies to insert (all {skipped_count} already exist)")
+            return 0, skipped_count
+
+        # Insert new movies
+        documents = [movie.to_document() for movie in new_movies]
+        result = await self.movies.insert_many(documents)
+        inserted_count = len(result.inserted_ids)
+
+        logger.info(
+            f"Inserted {inserted_count} new movies, skipped {skipped_count} existing"
+        )
+        return inserted_count, skipped_count
+
+    async def get_existing_slugs(self, slugs: List[str]) -> set:
+        """Get set of slugs that already exist in database."""
+        cursor = self.movies.find(
+            {"_id": {"$in": slugs}},
+            {"_id": 1}
+        )
+        return {doc["_id"] async for doc in cursor}
+
     async def get_last_refresh(self) -> Optional[datetime]:
         """Get timestamp of last cache refresh."""
         doc = await self.metadata.find_one({"_id": "refresh_info"})

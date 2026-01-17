@@ -14,11 +14,14 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from datetime import datetime
 
 from fastapi import FastAPI, Query, HTTPException, Request, Depends, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response, RedirectResponse
 from fastapi.security import APIKeyHeader
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,6 +54,14 @@ from fastapi.responses import FileResponse
 
 # Configuration from environment
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "21600"))  # Default: 6 hours
+INCREMENTAL_UPDATE_ENABLED = os.getenv("INCREMENTAL_UPDATE_ENABLED", "true").lower() == "true"
+INCREMENTAL_UPDATE_INTERVAL_HOURS = int(os.getenv("INCREMENTAL_UPDATE_INTERVAL_HOURS", "6"))
+INCREMENTAL_UPDATE_LIMIT = int(os.getenv("INCREMENTAL_UPDATE_LIMIT", "100"))
+
+# Scheduler instance
+scheduler: Optional[AsyncIOScheduler] = None
+last_incremental_update: Optional[datetime] = None
+incremental_update_stats: Dict = {"runs": 0, "total_added": 0, "last_run": None}
 
 from models.movie import Movie
 from models.offer import StreamingOffer
@@ -92,7 +103,7 @@ async def get_curated_lists_for_menu() -> List[CuratedList]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifecycle - connect to MongoDB and cache on startup."""
-    global movie_repo, curated_repo
+    global movie_repo, curated_repo, scheduler
     # Initialize MongoDB
     db = await get_database()
     if db is not None:
@@ -104,7 +115,35 @@ async def lifespan(app: FastAPI):
         logger.warning("Running without MongoDB - using JSON file cache only")
     # Initialize cache (Redis if REDIS_URL set, otherwise in-memory)
     await init_cache()
+
+    # Initialize scheduler for incremental updates
+    if INCREMENTAL_UPDATE_ENABLED and movie_repo is not None:
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(
+            scheduled_incremental_update,
+            trigger=IntervalTrigger(hours=INCREMENTAL_UPDATE_INTERVAL_HOURS),
+            id="incremental_movie_update",
+            name="Incremental Movie Update",
+            replace_existing=True,
+        )
+        scheduler.start()
+        logger.info(
+            f"Scheduler started: incremental updates every {INCREMENTAL_UPDATE_INTERVAL_HOURS} hours "
+            f"(limit: {INCREMENTAL_UPDATE_LIMIT} movies)"
+        )
+    else:
+        if not INCREMENTAL_UPDATE_ENABLED:
+            logger.info("Incremental updates disabled via INCREMENTAL_UPDATE_ENABLED=false")
+        elif movie_repo is None:
+            logger.info("Incremental updates disabled: MongoDB not available")
+
     yield
+
+    # Shutdown scheduler
+    if scheduler is not None:
+        scheduler.shutdown(wait=False)
+        logger.info("Scheduler shut down")
+
     await close_cache()
     await close_connection()
 
@@ -286,6 +325,81 @@ async def sync_movies_to_mongodb(movies: List[Movie]):
             logger.info(f"Cache invalidated after sync (backend: {get_cache_backend_name()})")
         except Exception as e:
             logger.error(f"Failed to sync to MongoDB: {e}")
+
+
+async def fetch_and_add_new_movies(
+    limit: int = 100,
+    include_archive: bool = False,
+    enrich_with_tmdb: bool = True
+) -> Tuple[int, int]:
+    """
+    Fetch movies from sources and add only NEW movies to database.
+    Returns tuple of (inserted_count, skipped_count).
+    """
+    global last_incremental_update, incremental_update_stats
+
+    if movie_repo is None:
+        logger.warning("MongoDB not available for incremental update")
+        return 0, 0
+
+    logger.info(f"Starting incremental update (limit={limit})")
+
+    try:
+        all_movies = []
+
+        # Fetch from JustWatch India
+        justwatch = JustWatchScraper()
+        jw_movies = justwatch.fetch_movies(limit=limit)
+        all_movies.extend(jw_movies)
+
+        # Optionally fetch from Internet Archive
+        if include_archive:
+            archive = InternetArchiveScraper()
+            ia_movies = archive.fetch_movies(limit=50)
+            all_movies.extend(ia_movies)
+
+        # Enrich with TMDB data
+        if enrich_with_tmdb:
+            tmdb = TMDBClient()
+            if tmdb.is_available:
+                for i, movie in enumerate(all_movies):
+                    all_movies[i] = tmdb.enrich_movie(movie)
+
+        # Insert only new movies (skip existing)
+        inserted, skipped = await movie_repo.insert_new_movies_only(all_movies)
+
+        # Update stats
+        last_incremental_update = datetime.utcnow()
+        incremental_update_stats["runs"] += 1
+        incremental_update_stats["total_added"] += inserted
+        incremental_update_stats["last_run"] = last_incremental_update.isoformat()
+        incremental_update_stats["last_inserted"] = inserted
+        incremental_update_stats["last_skipped"] = skipped
+
+        if inserted > 0:
+            # Invalidate caches only if new movies were added
+            global _cache_timestamp
+            _cache_timestamp = 0
+            await get_cache().invalidate_all()
+            logger.info(f"Cache invalidated after adding {inserted} new movies")
+
+        logger.info(f"Incremental update complete: {inserted} added, {skipped} skipped")
+        return inserted, skipped
+
+    except Exception as e:
+        logger.error(f"Incremental update failed: {e}")
+        return 0, 0
+
+
+async def scheduled_incremental_update():
+    """Scheduled job for incremental movie updates."""
+    logger.info("Running scheduled incremental update...")
+    inserted, skipped = await fetch_and_add_new_movies(
+        limit=INCREMENTAL_UPDATE_LIMIT,
+        include_archive=False,
+        enrich_with_tmdb=True
+    )
+    logger.info(f"Scheduled update complete: {inserted} new movies added")
 
 
 async def get_cached_genres_services() -> Tuple[List[str], List[str]]:
@@ -1785,6 +1899,45 @@ async def admin_refresh_cache(
     return RedirectResponse(url="/admin/dashboard?refreshed=1", status_code=302)
 
 
+@app.post("/admin/incremental-update")
+async def admin_incremental_update(
+    request: Request,
+    limit: int = Form(100),
+):
+    """Admin-only: Trigger incremental update (add new movies only)."""
+    if not verify_admin_key(request):
+        return RedirectResponse(url="/admin", status_code=302)
+
+    inserted, skipped = await fetch_and_add_new_movies(limit=limit)
+
+    return RedirectResponse(
+        url=f"/admin/dashboard?incremental=1&inserted={inserted}&skipped={skipped}",
+        status_code=302
+    )
+
+
+@app.get("/admin/scheduler-status")
+async def admin_scheduler_status(request: Request):
+    """Admin-only: Get scheduler status and stats."""
+    if not verify_admin_key(request):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    scheduler_info = {
+        "enabled": INCREMENTAL_UPDATE_ENABLED,
+        "interval_hours": INCREMENTAL_UPDATE_INTERVAL_HOURS,
+        "limit_per_run": INCREMENTAL_UPDATE_LIMIT,
+        "scheduler_running": scheduler is not None and scheduler.running if scheduler else False,
+        "stats": incremental_update_stats,
+    }
+
+    if scheduler is not None and scheduler.running:
+        job = scheduler.get_job("incremental_movie_update")
+        if job:
+            scheduler_info["next_run"] = job.next_run_time.isoformat() if job.next_run_time else None
+
+    return scheduler_info
+
+
 # ========== CURATED LIST USER ROUTES ==========
 
 @app.get("/list/{slug}")
@@ -1853,6 +2006,50 @@ async def refresh_cache(
         "cache_ttl_seconds": cache.ttl,
         "mongodb_synced": movie_repo is not None,
     }
+
+
+@app.post("/incremental-update")
+async def api_incremental_update(
+    request: Request,
+    limit: int = Query(100, ge=10, le=500, description="Number of movies to fetch"),
+):
+    """
+    Add new movies only (skip existing). Requires admin key.
+    This is useful for scheduled updates that don't modify existing data.
+    """
+    if not verify_admin_key(request):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    inserted, skipped = await fetch_and_add_new_movies(limit=limit)
+
+    return {
+        "message": "Incremental update completed",
+        "inserted": inserted,
+        "skipped": skipped,
+        "stats": incremental_update_stats,
+    }
+
+
+@app.get("/scheduler-status")
+async def api_scheduler_status(request: Request):
+    """Get scheduler status. Requires admin key."""
+    if not verify_admin_key(request):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    result = {
+        "enabled": INCREMENTAL_UPDATE_ENABLED,
+        "interval_hours": INCREMENTAL_UPDATE_INTERVAL_HOURS,
+        "limit_per_run": INCREMENTAL_UPDATE_LIMIT,
+        "scheduler_running": scheduler is not None and scheduler.running if scheduler else False,
+        "stats": incremental_update_stats,
+    }
+
+    if scheduler is not None and scheduler.running:
+        job = scheduler.get_job("incremental_movie_update")
+        if job:
+            result["next_run"] = job.next_run_time.isoformat() if job.next_run_time else None
+
+    return result
 
 
 @app.get("/health")
