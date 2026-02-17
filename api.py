@@ -18,7 +18,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, Query, HTTPException, Request, Depends, Form
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import Response, RedirectResponse, JSONResponse
+from fastapi.responses import Response, RedirectResponse, JSONResponse, HTMLResponse
 from fastapi.security import APIKeyHeader
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -34,6 +34,11 @@ _genres_cache: List[str] = []
 _services_cache: List[str] = []
 _cache_timestamp: float = 0
 METADATA_CACHE_TTL = 300  # 5 minutes
+
+# Home page cache (full HTML response)
+_home_page_cache: Optional[str] = None
+_home_page_cache_time: float = 0
+HOME_PAGE_CACHE_TTL = 300  # 5 minutes
 
 
 def load_env_file():
@@ -593,6 +598,12 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
 @app.get("/")
 async def home(request: Request):
     """SSR home page with Netflix-style collections."""
+    global _home_page_cache, _home_page_cache_time
+
+    # Return cached HTML if valid
+    if _home_page_cache and (time.time() - _home_page_cache_time) < HOME_PAGE_CACHE_TTL:
+        return HTMLResponse(content=_home_page_cache)
+
     curated_lists = await get_curated_lists_for_menu()
 
     # Fetch top rated movies
@@ -650,7 +661,7 @@ async def home(request: Request):
     ]
     movies_json = json.dumps(movies_data)
 
-    return templates.TemplateResponse("home.html", {
+    response = templates.TemplateResponse("home.html", {
         "request": request,
         "top_rated_movies": top_movies,
         "collections": collections,
@@ -663,6 +674,12 @@ async def home(request: Request):
         "canonical_path": "/",
         "active_tab": "home",
     })
+
+    # Cache the rendered HTML
+    _home_page_cache = response.body.decode()
+    _home_page_cache_time = time.time()
+
+    return response
 
 
 @app.get("/top-rated")
