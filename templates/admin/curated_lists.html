@@ -31,6 +31,45 @@
     </form>
 </div>
 
+<!-- Import from JSON -->
+<div class="card">
+    <div class="flex-between" style="margin-bottom: 15px;">
+        <h3>Import List from JSON</h3>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSampleJson()">Show Sample Format</button>
+    </div>
+
+    <div id="sampleJsonSection" style="display: none; margin-bottom: 20px;">
+        <pre style="background: var(--bg-dark); padding: 15px; border-radius: 8px; font-size: 0.85rem; overflow-x: auto;"><code>{
+  "label": "Oscar Winners 2024",
+  "slug": "oscar-winners-2024",
+  "description": "Academy Award winning films from 2024",
+  "movies": [
+    {"title": "Oppenheimer", "year": 2023},
+    {"title": "Poor Things", "year": 2023},
+    {"title": "The Holdovers", "year": 2023},
+    {"title": "Anatomy of a Fall", "year": 2023},
+    {"title": "Killers of the Flower Moon", "year": 2023}
+  ]
+}</code></pre>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+            Movies are matched by title and year against existing database records. No duplicates are created.
+        </p>
+    </div>
+
+    <form id="jsonUploadForm" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="margin: 0; flex: 1; min-width: 300px;">
+            <label for="jsonFile">JSON File</label>
+            <input type="file" id="jsonFile" accept=".json,application/json" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Import List</button>
+    </form>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+        Movies not in database will be automatically fetched from TMDB.
+    </p>
+
+    <div id="importResults" style="display: none; margin-top: 20px;"></div>
+</div>
+
 <!-- Existing Lists -->
 <div class="card">
     <h3 style="margin-bottom: 15px;">Existing Lists</h3>
@@ -88,4 +127,140 @@
         <li>Users can browse lists at <code>/list/your-slug</code></li>
     </ul>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleSampleJson() {
+    const section = document.getElementById('sampleJsonSection');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
+document.getElementById('jsonUploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const fileInput = document.getElementById('jsonFile');
+    const resultsDiv = document.getElementById('importResults');
+
+    if (!fileInput.files.length) {
+        alert('Please select a JSON file');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        try {
+            const jsonData = JSON.parse(e.target.result);
+
+            resultsDiv.innerHTML = '<p style="color: var(--text-muted);">Processing...</p>';
+            resultsDiv.style.display = 'block';
+
+            const response = await fetch('/admin/lists/import-json', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(jsonData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                let html = `
+                    <div class="alert alert-success">
+                        List "<strong>${result.list_label}</strong>" created with ${result.total_in_list} movies!
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px;">
+                        <div class="stat-box">
+                            <div class="stat-value">${result.matched_count}</div>
+                            <div class="stat-label">Already in DB</div>
+                        </div>
+                        <div class="stat-box stat-box-success">
+                            <div class="stat-value">${result.added_from_tmdb}</div>
+                            <div class="stat-label">Added from TMDB</div>
+                        </div>
+                        <div class="stat-box stat-box-warning">
+                            <div class="stat-value">${result.not_found_count}</div>
+                            <div class="stat-label">Not Found</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value">${result.total_movies}</div>
+                            <div class="stat-label">Total Input</div>
+                        </div>
+                    </div>
+                `;
+
+                if (result.added_movies && result.added_movies.length > 0) {
+                    html += `
+                        <details style="margin-top: 10px;" open>
+                            <summary style="cursor: pointer; color: var(--success);">
+                                Movies added from TMDB (${result.added_movies.length})
+                            </summary>
+                            <ul style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                                ${result.added_movies.map(m => `<li>${m.title} (${m.year || 'no year'})</li>`).join('')}
+                            </ul>
+                        </details>
+                    `;
+                }
+
+                if (result.not_found && result.not_found.length > 0) {
+                    html += `
+                        <details style="margin-top: 10px;">
+                            <summary style="cursor: pointer; color: var(--secondary);">
+                                Movies not found (${result.not_found.length})
+                            </summary>
+                            <ul style="margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                                ${result.not_found.map(m => `<li>${m.title} (${m.year || 'no year'})</li>`).join('')}
+                            </ul>
+                        </details>
+                    `;
+                }
+
+                html += `
+                    <div style="margin-top: 15px;">
+                        <a href="/admin/lists/${result.list_slug}" class="btn btn-primary btn-sm">Edit List</a>
+                        <a href="/list/${result.list_slug}" target="_blank" class="btn btn-secondary btn-sm">View List</a>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+
+                // Refresh page after 3 seconds to show new list
+                setTimeout(() => window.location.reload(), 3000);
+            } else {
+                resultsDiv.innerHTML = `<div class="alert alert-error">${result.error}</div>`;
+            }
+        } catch (err) {
+            resultsDiv.innerHTML = `<div class="alert alert-error">Invalid JSON file: ${err.message}</div>`;
+            resultsDiv.style.display = 'block';
+        }
+    };
+
+    reader.readAsText(file);
+});
+</script>
+
+<style>
+.stat-box {
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+.stat-box .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+.stat-box .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.stat-box-success .stat-value {
+    color: var(--success);
+}
+.stat-box-warning .stat-value {
+    color: var(--secondary);
+}
+</style>
 {% endblock %}

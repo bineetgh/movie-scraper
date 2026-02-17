@@ -25,6 +25,34 @@
 <div class="alert alert-success">Movies refreshed successfully from API!</div>
 {% endif %}
 
+{% if request.query_params.get('bulk_added') %}
+<div class="alert alert-success">{{ request.query_params.get('bulk_added') }} movies added to list!</div>
+{% endif %}
+
+{% if request.query_params.get('bulk_deleted') %}
+<div class="alert alert-success">{{ request.query_params.get('bulk_deleted') }} movies deleted!</div>
+{% endif %}
+
+<!-- Bulk Actions Toolbar -->
+<div class="bulk-toolbar" id="bulkToolbar" style="display: none;">
+    <div class="bulk-info">
+        <span id="selectedCount">0</span> movies selected
+    </div>
+    <div class="bulk-actions">
+        {% if curated_lists %}
+        <select id="bulkListSelect" class="form-control" style="width: auto;">
+            <option value="">Add to list...</option>
+            {% for list in curated_lists %}
+            <option value="{{ list.slug }}">{{ list.label }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="bulkAddToList()">Add Selected</button>
+        {% endif %}
+        <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()">Delete Selected</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="clearSelection()">Clear Selection</button>
+    </div>
+</div>
+
 <div class="card">
     <form action="/admin/dashboard" method="get" class="search-box">
         <input type="text" name="search" class="form-control" placeholder="Search movies..." value="{{ search }}">
@@ -38,6 +66,11 @@
         <table>
             <thead>
                 <tr>
+                    <th style="width: 40px;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        </label>
+                    </th>
                     <th>Movie</th>
                     <th>Year</th>
                     <th>Rating</th>
@@ -48,7 +81,12 @@
             </thead>
             <tbody>
                 {% for movie in movies %}
-                <tr>
+                <tr data-movie-slug="{{ movie.slug }}">
+                    <td>
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="movie-checkbox" value="{{ movie.slug }}" onchange="updateSelection()">
+                        </label>
+                    </td>
                     <td>
                         <div class="movie-title-cell">
                             <img src="{{ movie.poster_url or '/static/placeholder.png' }}"
@@ -82,7 +120,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
                         No movies found
                     </td>
                 </tr>
@@ -119,6 +157,7 @@
 
 {% block scripts %}
 <script>
+// Single movie add to list
 async function addToList(select, movieSlug) {
     const listSlug = select.value;
     if (!listSlug) return;
@@ -143,5 +182,145 @@ async function addToList(select, movieSlug) {
 
     select.value = '';
 }
+
+// Bulk operations
+function getSelectedMovies() {
+    const checkboxes = document.querySelectorAll('.movie-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function updateSelection() {
+    const selected = getSelectedMovies();
+    const toolbar = document.getElementById('bulkToolbar');
+    const countSpan = document.getElementById('selectedCount');
+    const selectAll = document.getElementById('selectAll');
+    const allCheckboxes = document.querySelectorAll('.movie-checkbox');
+
+    countSpan.textContent = selected.length;
+    toolbar.style.display = selected.length > 0 ? 'flex' : 'none';
+
+    // Update "select all" checkbox state
+    if (allCheckboxes.length > 0) {
+        selectAll.checked = selected.length === allCheckboxes.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < allCheckboxes.length;
+    }
+}
+
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.movie-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateSelection();
+}
+
+function clearSelection() {
+    document.querySelectorAll('.movie-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    updateSelection();
+}
+
+async function bulkAddToList() {
+    const selected = getSelectedMovies();
+    const listSlug = document.getElementById('bulkListSelect').value;
+
+    if (!listSlug) {
+        alert('Please select a list');
+        return;
+    }
+
+    if (selected.length === 0) {
+        alert('No movies selected');
+        return;
+    }
+
+    if (!confirm(`Add ${selected.length} movies to the selected list?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/bulk/add-to-list', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                movie_slugs: selected,
+                list_slug: listSlug
+            })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = `/admin/dashboard?bulk_added=${result.added_count}`;
+        } else {
+            alert('Failed: ' + (result.error || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function bulkDelete() {
+    const selected = getSelectedMovies();
+
+    if (selected.length === 0) {
+        alert('No movies selected');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selected.length} movies? This cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/bulk/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({movie_slugs: selected})
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = `/admin/dashboard?bulk_deleted=${result.deleted_count}`;
+        } else {
+            alert('Failed: ' + (result.error || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
 </script>
+
+<style>
+.bulk-toolbar {
+    background: var(--bg-surface);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.bulk-info {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.movie-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+tr[data-movie-slug]:hover {
+    background: rgba(255,255,255,0.03);
+}
+</style>
 {% endblock %}

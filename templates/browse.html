@@ -30,20 +30,74 @@
         </h1>
 
         <div class="browse-filters">
-            <select name="service" onchange="window.location.href='/browse?service=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
+            <select name="service" onchange="updateFilters('service', this.value)">
                 <option value="">All Services</option>
                 {% for service in services %}
                 <option value="{{ service }}" {{ 'selected' if service == current_service else '' }}>{{ service }}</option>
                 {% endfor %}
             </select>
 
-            <select name="min_rating" onchange="window.location.href='/browse?min_rating=' + this.value + '{{ '&availability=' + current_availability if current_availability and current_availability != 'all' else '' }}'">
+            <select name="min_rating" onchange="updateFilters('min_rating', this.value)">
                 <option value="0" {{ 'selected' if min_rating == 0 else '' }}>Any Rating</option>
                 <option value="6" {{ 'selected' if min_rating == 6 else '' }}>IMDb 6+</option>
                 <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
                 <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
             </select>
+
+            <select name="max_runtime" onchange="updateFilters('max_runtime', this.value)">
+                <option value="0" {{ 'selected' if max_runtime == 0 else '' }}>Any Length</option>
+                <option value="90" {{ 'selected' if max_runtime == 90 else '' }}>Under 90 min</option>
+                <option value="120" {{ 'selected' if max_runtime == 120 else '' }}>Under 2 hours</option>
+                <option value="150" {{ 'selected' if max_runtime == 150 else '' }}>Under 2.5 hours</option>
+            </select>
+
+            <button type="button" class="filter-btn" onclick="toggleAdvancedFilters()">
+                More Filters
+                <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor"><path d="M1 1l4 4 4-4"/></svg>
+            </button>
         </div>
+    </div>
+
+    <!-- Advanced Filters Panel -->
+    <div class="advanced-filters" id="advancedFilters" style="display: none;">
+        <div class="filter-group">
+            <label>Include Genres (all must match)</label>
+            <div class="multi-select" id="genreSelect">
+                {% for g in all_genres %}
+                <label class="chip {{ 'selected' if g in current_genres else '' }}">
+                    <input type="checkbox" value="{{ g }}" {{ 'checked' if g in current_genres else '' }} onchange="updateGenreFilters()">
+                    {{ g }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label>Exclude Genres</label>
+            <div class="multi-select" id="excludeGenreSelect">
+                {% for g in all_genres %}
+                <label class="chip exclude {{ 'selected' if g in exclude_genres else '' }}">
+                    <input type="checkbox" value="{{ g }}" {{ 'checked' if g in exclude_genres else '' }} onchange="updateExcludeGenreFilters()">
+                    {{ g }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label>Exclude Services</label>
+            <div class="multi-select" id="excludeServiceSelect">
+                {% for s in services %}
+                <label class="chip exclude {{ 'selected' if s in exclude_services else '' }}">
+                    <input type="checkbox" value="{{ s }}" {{ 'checked' if s in exclude_services else '' }} onchange="updateExcludeServiceFilters()">
+                    {{ s }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <button type="button" class="apply-filters-btn" onclick="applyAdvancedFilters()">Apply Filters</button>
+        <button type="button" class="clear-filters-btn" onclick="clearAdvancedFilters()">Clear All</button>
     </div>
 
     <!-- Alphabet Filter -->
@@ -80,6 +134,10 @@
     {% if current_service %}{% set filter_params = filter_params + '&service=' + current_service %}{% endif %}
     {% if current_genre %}{% set filter_params = filter_params + '&genre=' + current_genre %}{% endif %}
     {% if min_rating %}{% set filter_params = filter_params + '&min_rating=' + min_rating|string %}{% endif %}
+    {% if max_runtime %}{% set filter_params = filter_params + '&max_runtime=' + max_runtime|string %}{% endif %}
+    {% if current_genres %}{% set filter_params = filter_params + '&genres=' + current_genres %}{% endif %}
+    {% if exclude_genres %}{% set filter_params = filter_params + '&exclude_genres=' + exclude_genres %}{% endif %}
+    {% if exclude_services %}{% set filter_params = filter_params + '&exclude_services=' + exclude_services %}{% endif %}
 
     <nav class="pagination" aria-label="Pagination">
         {% if page > 1 %}
@@ -108,4 +166,96 @@
     </nav>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateFilters(key, value) {
+    const params = new URLSearchParams(window.location.search);
+    if (value && value !== '0' && value !== '') {
+        params.set(key, value);
+    } else {
+        params.delete(key);
+    }
+    params.delete('page');
+    window.location.href = '/browse?' + params.toString();
+}
+
+function toggleAdvancedFilters() {
+    const panel = document.getElementById('advancedFilters');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function getSelectedValues(containerId) {
+    const container = document.getElementById(containerId);
+    const checked = container.querySelectorAll('input:checked');
+    return Array.from(checked).map(cb => cb.value);
+}
+
+function updateGenreFilters() {
+    const selected = getSelectedValues('genreSelect');
+    document.querySelectorAll('#genreSelect .chip').forEach(chip => {
+        chip.classList.toggle('selected', chip.querySelector('input').checked);
+    });
+}
+
+function updateExcludeGenreFilters() {
+    document.querySelectorAll('#excludeGenreSelect .chip').forEach(chip => {
+        chip.classList.toggle('selected', chip.querySelector('input').checked);
+    });
+}
+
+function updateExcludeServiceFilters() {
+    document.querySelectorAll('#excludeServiceSelect .chip').forEach(chip => {
+        chip.classList.toggle('selected', chip.querySelector('input').checked);
+    });
+}
+
+function applyAdvancedFilters() {
+    const params = new URLSearchParams(window.location.search);
+
+    const genres = getSelectedValues('genreSelect');
+    const excludeGenres = getSelectedValues('excludeGenreSelect');
+    const excludeServices = getSelectedValues('excludeServiceSelect');
+
+    if (genres.length > 0) {
+        params.set('genres', genres.join(','));
+    } else {
+        params.delete('genres');
+    }
+
+    if (excludeGenres.length > 0) {
+        params.set('exclude_genres', excludeGenres.join(','));
+    } else {
+        params.delete('exclude_genres');
+    }
+
+    if (excludeServices.length > 0) {
+        params.set('exclude_services', excludeServices.join(','));
+    } else {
+        params.delete('exclude_services');
+    }
+
+    params.delete('page');
+    params.delete('genre'); // Remove single genre filter
+    window.location.href = '/browse?' + params.toString();
+}
+
+function clearAdvancedFilters() {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('genres');
+    params.delete('exclude_genres');
+    params.delete('exclude_services');
+    params.delete('page');
+    window.location.href = '/browse?' + params.toString();
+}
+
+// Show panel if filters are active
+document.addEventListener('DOMContentLoaded', function() {
+    const hasAdvancedFilters = '{{ current_genres }}' || '{{ exclude_genres }}' || '{{ exclude_services }}';
+    if (hasAdvancedFilters) {
+        document.getElementById('advancedFilters').style.display = 'block';
+    }
+});
+</script>
 {% endblock %}

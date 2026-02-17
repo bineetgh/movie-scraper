@@ -1,7 +1,8 @@
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from models.movie import Movie
+from models.tvshow import TVShow
 from models.offer import StreamingOffer, StreamingAvailability, MonetizationType
 from scrapers.base import BaseScraper
 
@@ -383,6 +384,143 @@ class JustWatchScraper(BaseScraper):
         except Exception as e:
             print(f"Error searching JustWatch: {e}")
             return []
+
+    def _parse_tvshow(self, node: Dict) -> Optional[TVShow]:
+        """Parse a TV show node from GraphQL response."""
+        content = node.get("content", {})
+        offers = node.get("offers", []) or []
+
+        # Parse all offers into structured format
+        streaming = self._parse_offers(offers)
+
+        # Skip shows with no offers at all
+        if not streaming.has_any_offer():
+            return None
+
+        # Extract cast and creator
+        cast = []
+        creator = None
+        for credit in content.get("credits", []) or []:
+            if credit.get("role") == "CREATOR" and not creator:
+                creator = credit.get("name")
+            elif credit.get("role") == "ACTOR":
+                cast.append(credit.get("name"))
+
+        # Extract streaming services and URLs
+        all_offers = (streaming.free_offers + streaming.subscription_offers +
+                      streaming.rent_offers + streaming.buy_offers)
+        services = list({o.provider_name for o in all_offers})
+        urls = list({o.url for o in all_offers if o.url})
+
+        # Build poster URL
+        poster_url = None
+        if content.get("posterUrl"):
+            poster_url = f"https://images.justwatch.com{content['posterUrl'].replace('{profile}', 's592')}"
+
+        # Build backdrop URL
+        backdrop_url = None
+        backdrops = content.get("backdrops", []) or []
+        if backdrops:
+            backdrop = backdrops[0].get("backdropUrl", "")
+            if backdrop:
+                backdrop_url = f"https://images.justwatch.com{backdrop.replace('{profile}', 's1440')}"
+
+        # Extract external IDs
+        external_ids = content.get("externalIds", {}) or {}
+        tmdb_id = None
+        imdb_id = None
+        if external_ids:
+            tmdb_id_str = external_ids.get("tmdbId")
+            if tmdb_id_str:
+                try:
+                    tmdb_id = int(tmdb_id_str)
+                except (ValueError, TypeError):
+                    pass
+            imdb_id = external_ids.get("imdbId")
+
+        # Extract year from first air date
+        year = content.get("originalReleaseYear")
+
+        return TVShow(
+            title=content.get("title", ""),
+            year=year,
+            genres=[self.GENRE_MAP.get(g.get("shortName", ""), g.get("shortName", "").title()) for g in content.get("genres", []) or [] if g.get("shortName")],
+            rating=content.get("scoring", {}).get("imdbScore") if content.get("scoring") else None,
+            synopsis=content.get("shortDescription", "") or "",
+            cast=cast[:10],
+            creator=creator,
+            seasons_count=content.get("seasonCount"),
+            episode_runtime=content.get("runtime"),
+            poster_url=poster_url,
+            backdrop_url=backdrop_url,
+            trailer_url=None,
+            streaming_services=services,
+            source_urls=urls,
+            tmdb_id=tmdb_id,
+            imdb_id=imdb_id,
+            justwatch_id=node.get("id"),
+            streaming=streaming,
+        )
+
+    def fetch_tvshows(
+        self,
+        limit: Optional[int] = 100,
+        monetization_types: Optional[List[str]] = None
+    ) -> List[TVShow]:
+        """Fetch TV shows from JustWatch India.
+
+        Args:
+            limit: Maximum number of shows to fetch
+            monetization_types: List of monetization types to include.
+        """
+        if monetization_types is None:
+            monetization_types = self.ALL_MONETIZATION_TYPES
+
+        shows = []
+        cursor = None
+        page_size = min(limit or 100, 50)
+
+        print(f"Fetching TV shows from JustWatch India (types: {monetization_types})...")
+
+        while True:
+            variables = {
+                "country": self.COUNTRY,
+                "language": self.LANGUAGE,
+                "first": page_size,
+                "after": cursor,
+                "filter": {
+                    "objectTypes": ["SHOW"],
+                    "monetizationTypes": monetization_types,
+                },
+            }
+
+            try:
+                data = self._execute_query(self.POPULAR_TITLES_QUERY, variables)
+                titles = data.get("data", {}).get("popularTitles", {})
+                edges = titles.get("edges", [])
+
+                for edge in edges:
+                    show = self._parse_tvshow(edge.get("node", {}))
+                    if show:
+                        shows.append(show)
+
+                    if limit and len(shows) >= limit:
+                        print(f"Fetched {len(shows)} TV shows")
+                        return shows
+
+                page_info = titles.get("pageInfo", {})
+                if not page_info.get("hasNextPage"):
+                    break
+
+                cursor = page_info.get("endCursor")
+                print(f"Fetched {len(shows)} TV shows so far...")
+
+            except Exception as e:
+                print(f"Error fetching TV shows from JustWatch: {e}")
+                break
+
+        print(f"Fetched {len(shows)} TV shows total")
+        return shows
 
     def search_and_match(
         self,

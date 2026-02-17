@@ -70,10 +70,12 @@ async def init_indexes(db: AsyncIOMotorDatabase):
     await movies.create_index("genres")
     await movies.create_index("streaming_providers")
     await movies.create_index("availability_types")
+    await movies.create_index("original_language")
 
     # Compound indexes for common queries
     await movies.create_index([("rating", DESCENDING), ("year", DESCENDING)])
     await movies.create_index([("genres", ASCENDING), ("rating", DESCENDING)])
+    await movies.create_index([("original_language", ASCENDING), ("rating", DESCENDING)])
 
     # Text search index
     await movies.create_index(
@@ -90,6 +92,39 @@ async def init_indexes(db: AsyncIOMotorDatabase):
             "synopsis": 1,
         },
         name="text_search_index",
+    )
+
+    # TV Shows indexes
+    tvshows = db.tvshows
+
+    await tvshows.create_index("slug", unique=True)
+    await tvshows.create_index([("rating", DESCENDING)])
+    await tvshows.create_index([("year", DESCENDING)])
+    await tvshows.create_index([("popularity", DESCENDING)])
+    await tvshows.create_index("genres")
+    await tvshows.create_index("streaming_providers")
+    await tvshows.create_index("availability_types")
+    await tvshows.create_index("status")
+
+    # Compound indexes
+    await tvshows.create_index([("rating", DESCENDING), ("year", DESCENDING)])
+    await tvshows.create_index([("genres", ASCENDING), ("rating", DESCENDING)])
+
+    # Text search index for TV shows
+    await tvshows.create_index(
+        [
+            ("title", TEXT),
+            ("synopsis", TEXT),
+            ("creator", TEXT),
+            ("cast", TEXT),
+        ],
+        weights={
+            "title": 10,
+            "creator": 5,
+            "cast": 3,
+            "synopsis": 1,
+        },
+        name="tvshow_text_search_index",
     )
 
     logger.info("MongoDB indexes created")

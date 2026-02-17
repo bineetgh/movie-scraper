@@ -28,9 +28,13 @@ class MovieRepository:
     async def get_all(
         self,
         genre: Optional[str] = None,
+        genres: Optional[List[str]] = None,
+        exclude_genres: Optional[List[str]] = None,
         service: Optional[str] = None,
+        exclude_services: Optional[List[str]] = None,
         availability: Optional[str] = None,
         min_rating: Optional[float] = None,
+        max_runtime: Optional[int] = None,
         letter: Optional[str] = None,
         sort_by: str = "rating",
         skip: int = 0,
@@ -39,14 +43,32 @@ class MovieRepository:
         """Get movies with optional filters and pagination."""
         query: Dict[str, Any] = {}
 
+        # Single genre (backward compatible)
         if genre:
             query["genres"] = genre
+        # Multiple genres (AND logic)
+        if genres:
+            query["genres"] = {"$all": genres}
+        # Exclude genres
+        if exclude_genres:
+            if "genres" in query:
+                query["genres"] = {"$all": genres, "$nin": exclude_genres} if genres else {"$nin": exclude_genres}
+            else:
+                query["genres"] = {"$nin": exclude_genres}
         if service:
             query["streaming_providers"] = service
+        # Exclude services
+        if exclude_services:
+            if "streaming_providers" in query:
+                query["streaming_providers"] = {"$eq": service, "$nin": exclude_services} if service else {"$nin": exclude_services}
+            else:
+                query["streaming_providers"] = {"$nin": exclude_services}
         if availability:
             query["availability_types"] = availability
         if min_rating:
             query["rating"] = {"$gte": min_rating}
+        if max_runtime:
+            query["runtime_minutes"] = {"$lte": max_runtime, "$gt": 0}
         if letter:
             if letter == "0-9":
                 query["title"] = {"$regex": "^[0-9]"}
@@ -68,9 +90,13 @@ class MovieRepository:
     async def count(
         self,
         genre: Optional[str] = None,
+        genres: Optional[List[str]] = None,
+        exclude_genres: Optional[List[str]] = None,
         service: Optional[str] = None,
+        exclude_services: Optional[List[str]] = None,
         availability: Optional[str] = None,
         min_rating: Optional[float] = None,
+        max_runtime: Optional[int] = None,
         letter: Optional[str] = None,
     ) -> int:
         """Count movies matching filters."""
@@ -78,12 +104,26 @@ class MovieRepository:
 
         if genre:
             query["genres"] = genre
+        if genres:
+            query["genres"] = {"$all": genres}
+        if exclude_genres:
+            if "genres" in query:
+                query["genres"] = {"$all": genres, "$nin": exclude_genres} if genres else {"$nin": exclude_genres}
+            else:
+                query["genres"] = {"$nin": exclude_genres}
         if service:
             query["streaming_providers"] = service
+        if exclude_services:
+            if "streaming_providers" in query:
+                query["streaming_providers"] = {"$eq": service, "$nin": exclude_services} if service else {"$nin": exclude_services}
+            else:
+                query["streaming_providers"] = {"$nin": exclude_services}
         if availability:
             query["availability_types"] = availability
         if min_rating:
             query["rating"] = {"$gte": min_rating}
+        if max_runtime:
+            query["runtime_minutes"] = {"$lte": max_runtime, "$gt": 0}
         if letter:
             if letter == "0-9":
                 query["title"] = {"$regex": "^[0-9]"}
@@ -281,3 +321,8 @@ class MovieRepository:
     async def get_total_count(self) -> int:
         """Get total number of movies in database."""
         return await self.movies.count_documents({})
+
+    async def delete(self, slug: str) -> bool:
+        """Delete a movie by its slug. Returns True if deleted."""
+        result = await self.movies.delete_one({"_id": slug})
+        return result.deleted_count > 0

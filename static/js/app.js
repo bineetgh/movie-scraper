@@ -178,6 +178,47 @@
         });
     }
 
+    // ========== Mood/Time Discovery ==========
+    const MOOD_GENRES = {
+        'feel-good': ['Comedy', 'Family', 'Romance', 'Animation', 'Music'],
+        'intense': ['Thriller', 'Action', 'Crime', 'Horror'],
+        'thought-provoking': ['Drama', 'Documentary', 'History', 'War'],
+        'escapist': ['Fantasy', 'Sci-Fi', 'Animation', 'Adventure'],
+        'dark': ['Horror', 'Thriller', 'Crime', 'War'],
+        'inspiring': ['Drama', 'Sport', 'Documentary', 'History']
+    };
+
+    const TIME_RANGES = {
+        'any': { min: 0, max: 999 },
+        'quick': { min: 0, max: 90 },
+        'standard': { min: 90, max: 120 },
+        'marathon': { min: 120, max: 999 }
+    };
+
+    window.currentMood = null;
+    window.currentTime = 'any';
+
+    window.setMood = function(mood) {
+        const wasActive = window.currentMood === mood;
+        window.currentMood = wasActive ? null : mood;
+
+        document.querySelectorAll('.mood-chip').forEach(function(chip) {
+            chip.classList.toggle('active', chip.dataset.mood === window.currentMood);
+        });
+
+        initForMePage();
+    };
+
+    window.setTime = function(time) {
+        window.currentTime = time;
+
+        document.querySelectorAll('.time-chip').forEach(function(chip) {
+            chip.classList.toggle('active', chip.dataset.time === time);
+        });
+
+        initForMePage();
+    };
+
     // ========== For Me Page - Recommendation Engine ==========
     function initForMePage() {
         const forMeContainer = document.getElementById('forMeContent');
@@ -185,7 +226,7 @@
 
         // Hide loading indicator first to avoid stuck loading state
         const loadingEl = document.getElementById('forMeLoading');
-        
+
         function hideLoading() {
             if (loadingEl) loadingEl.style.display = 'none';
         }
@@ -203,6 +244,26 @@
                     '</div>';
                 return;
             }
+
+        // Apply mood and time filters
+        var filteredMovies = allMoviesData;
+
+        if (window.currentMood && MOOD_GENRES[window.currentMood]) {
+            var moodGenres = MOOD_GENRES[window.currentMood];
+            filteredMovies = filteredMovies.filter(function(m) {
+                return (m.genres || []).some(function(g) {
+                    return moodGenres.indexOf(g) !== -1;
+                });
+            });
+        }
+
+        if (window.currentTime && TIME_RANGES[window.currentTime]) {
+            var timeRange = TIME_RANGES[window.currentTime];
+            filteredMovies = filteredMovies.filter(function(m) {
+                var runtime = m.runtime_minutes || 0;
+                return runtime > 0 && runtime >= timeRange.min && runtime <= timeRange.max;
+            });
+        }
 
         const watched = window.getWatchedMovies();
         const reactions = window.getReactions();
@@ -269,18 +330,39 @@
         });
         summaryHtml += '</div>';
 
+        // Find highly rated movies for "Because you liked X" explanations
+        const highlyRatedMovies = Object.keys(reactions)
+            .filter(function(slug) { return reactions[slug].rating >= 4; })
+            .map(function(slug) {
+                var movie = filteredMovies.find(function(m) { return m.slug === slug; }) ||
+                            allMoviesData.find(function(m) { return m.slug === slug; });
+                return movie ? { slug: slug, title: movie ? movie.title : slug, genres: reactions[slug].genres || [], rating: reactions[slug].rating, poster_url: movie ? movie.poster_url : null } : null;
+            })
+            .filter(function(m) { return m !== null; });
+
         // Score all movies
-        const scoredMovies = allMoviesData
+        const scoredMovies = filteredMovies
             .filter(function(movie) { return !watchedSlugs[movie.slug]; })
             .map(function(movie) {
                 var score = 0;
+                var matchedLikedMovie = null;
                 (movie.genres || []).forEach(function(genre) {
                     score += (genreScores[genre] || 0) * 10;
+                    // Find which liked movie contributed to this genre
+                    if (!matchedLikedMovie && highlyRatedMovies.length > 0) {
+                        for (var i = 0; i < highlyRatedMovies.length; i++) {
+                            if ((highlyRatedMovies[i].genres || []).indexOf(genre) !== -1) {
+                                matchedLikedMovie = highlyRatedMovies[i];
+                                break;
+                            }
+                        }
+                    }
                 });
                 if (movie.rating) {
                     score += movie.rating * 2;
                 }
                 movie.recScore = score;
+                movie.becauseLiked = matchedLikedMovie;
                 return movie;
             })
             .filter(function(movie) { return movie.recScore > 0; })
@@ -299,11 +381,49 @@
         // Build HTML
         var html = summaryHtml;
 
+        // Mood label if active
+        var moodLabel = window.currentMood ?
+            '<span class="mood-label">' + window.currentMood.replace('-', ' ') + ' movies</span>' : '';
+
+        // Time label if active
+        var timeLabels = { 'quick': 'under 90 min', 'standard': '90-120 min', 'marathon': 'over 2 hours' };
+        var timeLabel = window.currentTime && window.currentTime !== 'any' ?
+            '<span class="time-label">' + timeLabels[window.currentTime] + '</span>' : '';
+
+        // "Because you liked X" section - show one prominent liked movie
+        if (highlyRatedMovies.length > 0 && scoredMovies.length > 0) {
+            var topLiked = highlyRatedMovies[0];
+            var relatedToLiked = scoredMovies
+                .filter(function(m) {
+                    return m.becauseLiked && m.becauseLiked.slug === topLiked.slug;
+                })
+                .slice(0, 6);
+
+            if (relatedToLiked.length > 0) {
+                html += '<section class="because-liked">' +
+                    '<div class="because-liked-header">' +
+                    '<h3>Because you loved</h3>' +
+                    '<span class="liked-movie-ref">' +
+                    (topLiked.poster_url ? '<img src="' + topLiked.poster_url + '" alt="">' : '') +
+                    topLiked.title +
+                    '</span>' +
+                    '</div>' +
+                    '<div class="movies-row">';
+
+                relatedToLiked.forEach(function(movie) {
+                    html += createMovieCardHtml(movie);
+                });
+
+                html += '</div></section>';
+            }
+        }
+
         // Top picks section
+        var sectionTitle = window.currentMood ? 'Top ' + window.currentMood.replace('-', ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }) + ' Picks' : 'Top Picks For You';
         html += '<section class="rec-section">' +
             '<div class="rec-section-header">' +
-            '<h2>Top Picks For You</h2>' +
-            '<span class="reason">Based on your preferences</span>' +
+            '<h2>' + sectionTitle + '</h2>' +
+            '<span class="reason">Based on your preferences ' + moodLabel + ' ' + timeLabel + '</span>' +
             '</div>' +
             '<div class="movies-grid">';
 
@@ -313,26 +433,28 @@
 
         html += '</div></section>';
 
-        // Genre-specific sections
-        topGenres.slice(0, 3).forEach(function(genre) {
-            const genreMovies = scoredMovies
-                .filter(function(m) { return (m.genres || []).indexOf(genre) !== -1; })
-                .slice(0, 6);
+        // Genre-specific sections (only if no mood filter)
+        if (!window.currentMood) {
+            topGenres.slice(0, 3).forEach(function(genre) {
+                const genreMovies = scoredMovies
+                    .filter(function(m) { return (m.genres || []).indexOf(genre) !== -1; })
+                    .slice(0, 6);
 
-            if (genreMovies.length > 0) {
-                html += '<section class="rec-section">' +
-                    '<div class="rec-section-header">' +
-                    '<h2>Because you like ' + genre + '</h2>' +
-                    '</div>' +
-                    '<div class="movies-grid">';
+                if (genreMovies.length > 0) {
+                    html += '<section class="rec-section">' +
+                        '<div class="rec-section-header">' +
+                        '<h2>Because you like ' + genre + '</h2>' +
+                        '</div>' +
+                        '<div class="movies-grid">';
 
-                genreMovies.forEach(function(movie) {
-                    html += createMovieCardHtml(movie);
-                });
+                    genreMovies.forEach(function(movie) {
+                        html += createMovieCardHtml(movie);
+                    });
 
-                html += '</div></section>';
-            }
-        });
+                    html += '</div></section>';
+                }
+            });
+        }
 
         forMeContainer.innerHTML = html;
 
@@ -510,13 +632,134 @@
         });
     }
 
+    // ========== Theme Toggle ==========
+    function initThemeToggle() {
+        const toggle = document.getElementById('themeToggle');
+        if (!toggle) return;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('watchlazyTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        toggle.addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('watchlazyTheme', newTheme);
+        });
+    }
+
+    // ========== Search Autocomplete ==========
+    function initSearchAutocomplete() {
+        const input = document.getElementById('searchInput');
+        const dropdown = document.getElementById('searchAutocomplete');
+        if (!input || !dropdown) return;
+
+        let debounceTimer;
+        let currentQuery = '';
+
+        input.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(debounceTimer);
+
+            if (query.length < 2) {
+                dropdown.innerHTML = '';
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            currentQuery = query;
+            debounceTimer = setTimeout(function() {
+                fetchSuggestions(query);
+            }, 200);
+        });
+
+        input.addEventListener('focus', function() {
+            if (this.value.trim().length >= 2 && dropdown.innerHTML) {
+                dropdown.style.display = 'block';
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        function fetchSuggestions(query) {
+            fetch('/api/search/suggestions?q=' + encodeURIComponent(query))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (query !== currentQuery) return;
+                    renderSuggestions(data.suggestions || []);
+                })
+                .catch(function() {
+                    dropdown.style.display = 'none';
+                });
+        }
+
+        function renderSuggestions(suggestions) {
+            if (suggestions.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+
+            var html = '';
+            suggestions.forEach(function(movie) {
+                html += '<a href="/movie/' + movie.slug + '" class="autocomplete-item">' +
+                    '<img src="' + (movie.poster_url || '') + '" alt="" class="autocomplete-poster">' +
+                    '<div class="autocomplete-info">' +
+                    '<span class="autocomplete-title">' + movie.title + '</span>' +
+                    '<span class="autocomplete-meta">' + (movie.year || '') +
+                    (movie.rating ? ' &middot; ' + movie.rating + ' IMDb' : '') + '</span>' +
+                    '</div></a>';
+            });
+
+            dropdown.innerHTML = html;
+            dropdown.style.display = 'block';
+        }
+
+        // Keyboard navigation
+        input.addEventListener('keydown', function(e) {
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            const active = dropdown.querySelector('.autocomplete-item.active');
+            let index = -1;
+
+            if (active) {
+                items.forEach(function(item, i) {
+                    if (item === active) index = i;
+                });
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (active) active.classList.remove('active');
+                index = (index + 1) % items.length;
+                if (items[index]) items[index].classList.add('active');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (active) active.classList.remove('active');
+                index = index <= 0 ? items.length - 1 : index - 1;
+                if (items[index]) items[index].classList.add('active');
+            } else if (e.key === 'Enter' && active) {
+                e.preventDefault();
+                window.location.href = active.href;
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
     // ========== Initialize on DOM Ready ==========
     function init() {
+        initThemeToggle();
         initUserStates();
         initForMePage();
         initMobileNav();
         initMobileSearch();
         initMovieClickTracking();
+        initSearchAutocomplete();
     }
 
     if (document.readyState === 'loading') {

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "{{ page_title }}",
+    "description": "{{ page_description }}",
+    "url": "{{ base_url }}/tv/browse"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="browse-header">
+        <h1>TV Shows <span class="movie-count">({{ total_shows }} shows)</span></h1>
+
+        <div class="browse-filters">
+            <select name="service" onchange="updateFilters('service', this.value)">
+                <option value="">All Services</option>
+                {% for service in services %}
+                <option value="{{ service }}" {{ 'selected' if service == current_service else '' }}>{{ service }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="min_rating" onchange="updateFilters('min_rating', this.value)">
+                <option value="0" {{ 'selected' if min_rating == 0 else '' }}>Any Rating</option>
+                <option value="7" {{ 'selected' if min_rating == 7 else '' }}>IMDb 7+</option>
+                <option value="8" {{ 'selected' if min_rating == 8 else '' }}>IMDb 8+</option>
+            </select>
+
+            <select name="availability" onchange="updateFilters('availability', this.value)">
+                <option value="all" {{ 'selected' if current_availability == 'all' else '' }}>All Types</option>
+                <option value="free" {{ 'selected' if current_availability == 'free' else '' }}>Free</option>
+                <option value="subscription" {{ 'selected' if current_availability == 'subscription' else '' }}>Subscription</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- TV Shows Grid -->
+    <div class="movies-grid">
+        {% for show in shows %}
+        <article class="movie-card" data-show-slug="{{ show.slug }}">
+            <a href="{{ show.canonical_url }}">
+                <div class="poster-container">
+                    {% if show.poster_url %}
+                    <img src="{{ show.poster_url }}"
+                         alt="{{ show.title }} poster"
+                         loading="lazy"
+                         class="movie-poster">
+                    {% else %}
+                    <div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">
+                        📺
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="movie-info">
+                    <h3 class="movie-title">{{ show.title }}</h3>
+                    <div class="movie-meta">
+                        {% if show.year %}<span>{{ show.year }}</span>{% endif %}
+                        {% if show.rating %}<span class="movie-rating">{{ show.rating }} IMDb</span>{% endif %}
+                        {% if show.seasons_count %}<span>{{ show.seasons_count }} season{{ 's' if show.seasons_count != 1 else '' }}</span>{% endif %}
+                    </div>
+                    {% if show.synopsis %}
+                    <p class="movie-synopsis">{{ show.synopsis[:150] }}{% if show.synopsis | length > 150 %}...{% endif %}</p>
+                    {% endif %}
+                    <div class="movie-services">
+                        {% if show.is_free %}
+                        <span class="service-tag service-tag-free">Free</span>
+                        {% elif show.has_subscription %}
+                        <span class="service-tag service-tag-sub">Subscription</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+        </article>
+        {% else %}
+        <div class="no-results" style="grid-column: 1 / -1;">
+            <div class="no-results-icon">📺</div>
+            <h3>No TV shows found</h3>
+            <p>Try adjusting your filters</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    {% set filter_params = '' %}
+    {% if current_availability and current_availability != 'all' %}{% set filter_params = filter_params + '&availability=' + current_availability %}{% endif %}
+    {% if current_service %}{% set filter_params = filter_params + '&service=' + current_service %}{% endif %}
+    {% if min_rating %}{% set filter_params = filter_params + '&min_rating=' + min_rating|string %}{% endif %}
+
+    <nav class="pagination">
+        {% if page > 1 %}
+        <a href="/tv/browse?page={{ page - 1 }}{{ filter_params }}">Previous</a>
+        {% else %}
+        <span class="disabled">Previous</span>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="current">{{ p }}</span>
+            {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            <a href="/tv/browse?page={{ p }}{{ filter_params }}">{{ p }}</a>
+            {% elif p == page - 3 or p == page + 3 %}
+            <span>...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="/tv/browse?page={{ page + 1 }}{{ filter_params }}">Next</a>
+        {% else %}
+        <span class="disabled">Next</span>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updateFilters(key, value) {
+    const params = new URLSearchParams(window.location.search);
+    if (value && value !== '0' && value !== '' && value !== 'all') {
+        params.set(key, value);
+    } else {
+        params.delete(key);
+    }
+    params.delete('page');
+    window.location.href = '/tv/browse?' + params.toString();
+}
+</script>
+{% endblock %}

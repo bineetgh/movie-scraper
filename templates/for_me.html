@@ -19,6 +19,34 @@
 </script>
 
 <section>
+    <!-- Mood & Time Filters -->
+    <div class="discovery-header">
+        <h1>Discover Movies</h1>
+        <p>Find the perfect movie for your mood and time</p>
+
+        <div class="mood-selector">
+            <span class="selector-label">I'm in the mood for:</span>
+            <div class="mood-chips">
+                <button class="mood-chip" data-mood="feel-good" onclick="setMood('feel-good')">Feel-Good</button>
+                <button class="mood-chip" data-mood="intense" onclick="setMood('intense')">Intense</button>
+                <button class="mood-chip" data-mood="thought-provoking" onclick="setMood('thought-provoking')">Thought-Provoking</button>
+                <button class="mood-chip" data-mood="escapist" onclick="setMood('escapist')">Escapist</button>
+                <button class="mood-chip" data-mood="dark" onclick="setMood('dark')">Dark</button>
+                <button class="mood-chip" data-mood="inspiring" onclick="setMood('inspiring')">Inspiring</button>
+            </div>
+        </div>
+
+        <div class="time-selector">
+            <span class="selector-label">I have time for:</span>
+            <div class="time-chips">
+                <button class="time-chip active" data-time="any" onclick="setTime('any')">Any Length</button>
+                <button class="time-chip" data-time="quick" onclick="setTime('quick')">Quick Watch (&lt;90 min)</button>
+                <button class="time-chip" data-time="standard" onclick="setTime('standard')">Standard (90-120 min)</button>
+                <button class="time-chip" data-time="marathon" onclick="setTime('marathon')">Movie Night (&gt;2 hrs)</button>
+            </div>
+        </div>
+    </div>
+
     <!-- This container will be populated by JavaScript based on localStorage data -->
     <div id="forMeContent">
         <noscript>

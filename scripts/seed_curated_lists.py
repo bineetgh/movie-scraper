@@ -14,18 +14,42 @@ from motor.motor_asyncio import AsyncIOMotorClient
 load_dotenv()
 
 
-async def get_movies_by_criteria(db, genres=None, min_rating=None, max_rating=None,
-                                  exclude_genres=None, limit=20, title_contains=None):
-    """Get movie slugs matching criteria."""
+async def get_movies_by_criteria(
+    db,
+    genres=None,
+    min_rating=None,
+    max_rating=None,
+    exclude_genres=None,
+    limit=20,
+    title_contains=None,
+    languages=None,
+    exclude_languages=None,
+    sort_by="rating",
+):
+    """Get movie slugs matching criteria including language filtering."""
     query = {}
 
+    # Language filtering
+    if languages:
+        query["original_language"] = {"$in": languages}
+
+    if exclude_languages:
+        if "original_language" in query:
+            query["original_language"]["$nin"] = exclude_languages
+        else:
+            query["original_language"] = {"$nin": exclude_languages}
+
+    # Genre filtering
     if genres:
         query["genres"] = {"$in": genres}
 
     if exclude_genres:
-        query["genres"] = query.get("genres", {})
-        query.setdefault("genres", {})["$nin"] = exclude_genres
+        if "genres" in query:
+            query["genres"]["$nin"] = exclude_genres
+        else:
+            query["genres"] = {"$nin": exclude_genres}
 
+    # Rating filtering
     if min_rating is not None or max_rating is not None:
         query["rating"] = {}
         if min_rating is not None:
@@ -35,8 +59,16 @@ async def get_movies_by_criteria(db, genres=None, min_rating=None, max_rating=No
         if not query["rating"]:
             del query["rating"]
 
-    # Sort by rating descending
-    cursor = db.movies.find(query, {"_id": 1}).sort("rating", -1).limit(limit)
+    # Sort options
+    sort_options = {
+        "rating": [("rating", -1), ("vote_count", -1)],
+        "popularity": [("popularity", -1)],
+        "year": [("year", -1)],
+        "title": [("title", 1)],
+    }
+    sort_spec = sort_options.get(sort_by, [("rating", -1)])
+
+    cursor = db.movies.find(query, {"_id": 1}).sort(sort_spec).limit(limit)
     movies = await cursor.to_list(length=limit)
     return [m["_id"] for m in movies]
 
@@ -117,7 +149,11 @@ async def seed_lists():
             "description": "Best of Bollywood, Tollywood, and regional Indian cinema",
             "is_active": True,
             "display_order": 7,
-            "criteria": {"min_rating": 6.5, "limit": 30},  # Will filter by Indian titles
+            "criteria": {
+                "languages": ["hi", "ta", "te", "ml", "kn"],
+                "min_rating": 6.5,
+                "limit": 30,
+            },
         },
         {
             "_id": "south-masala",
@@ -125,7 +161,12 @@ async def seed_lists():
             "description": "Action-packed blockbusters from South Indian cinema",
             "is_active": True,
             "display_order": 8,
-            "criteria": {"genres": ["act"], "min_rating": 6.0, "limit": 25},
+            "criteria": {
+                "languages": ["ta", "te", "ml", "kn"],
+                "genres": ["act"],
+                "min_rating": 6.0,
+                "limit": 25,
+            },
         },
         {
             "_id": "hidden-gems",
@@ -159,6 +200,76 @@ async def seed_lists():
             "display_order": 12,
             "criteria": {"genres": ["act", "trl"], "min_rating": 6.5, "limit": 20},
         },
+        # Regional Language Lists
+        {
+            "_id": "tamil-movies",
+            "label": "Tamil Movies",
+            "description": "Best of Kollywood - Tamil cinema's finest films",
+            "is_active": True,
+            "display_order": 13,
+            "criteria": {"languages": ["ta"], "min_rating": 5.5, "limit": 30},
+        },
+        {
+            "_id": "telugu-movies",
+            "label": "Telugu Movies",
+            "description": "Best of Tollywood - Telugu cinema blockbusters",
+            "is_active": True,
+            "display_order": 14,
+            "criteria": {"languages": ["te"], "min_rating": 5.5, "limit": 30},
+        },
+        {
+            "_id": "malayalam-movies",
+            "label": "Malayalam Movies",
+            "description": "Best of Mollywood - Malayalam cinema gems",
+            "is_active": True,
+            "display_order": 15,
+            "criteria": {"languages": ["ml"], "min_rating": 5.5, "limit": 30},
+        },
+        {
+            "_id": "kannada-movies",
+            "label": "Kannada Movies",
+            "description": "Best of Sandalwood - Kannada cinema treasures",
+            "is_active": True,
+            "display_order": 16,
+            "criteria": {"languages": ["kn"], "min_rating": 5.0, "limit": 25},
+        },
+        {
+            "_id": "bollywood",
+            "label": "Bollywood",
+            "description": "Hindi cinema's biggest hits and classics",
+            "is_active": True,
+            "display_order": 17,
+            "criteria": {"languages": ["hi"], "min_rating": 5.5, "limit": 30},
+        },
+        # International Cinema
+        {
+            "_id": "korean-cinema",
+            "label": "Korean Cinema",
+            "description": "K-Movies - Award-winning Korean films",
+            "is_active": True,
+            "display_order": 18,
+            "criteria": {"languages": ["ko"], "min_rating": 6.0, "limit": 25},
+        },
+        {
+            "_id": "japanese-cinema",
+            "label": "Japanese Cinema",
+            "description": "Japanese films from anime to drama",
+            "is_active": True,
+            "display_order": 19,
+            "criteria": {"languages": ["ja"], "min_rating": 6.0, "limit": 25},
+        },
+        {
+            "_id": "world-cinema",
+            "label": "World Cinema",
+            "description": "International films from around the globe",
+            "is_active": True,
+            "display_order": 20,
+            "criteria": {
+                "exclude_languages": ["en"],
+                "min_rating": 7.0,
+                "limit": 25,
+            },
+        },
     ]
 
     # Fetch movies for each list
@@ -170,35 +281,12 @@ async def seed_lists():
             min_rating=criteria.get("min_rating"),
             max_rating=criteria.get("max_rating"),
             exclude_genres=criteria.get("exclude_genres"),
+            languages=criteria.get("languages"),
+            exclude_languages=criteria.get("exclude_languages"),
+            sort_by=criteria.get("sort_by", "rating"),
             limit=criteria.get("limit", 20),
         )
         lst["movie_slugs"] = movie_slugs
-
-    # Special handling for Desi Hits - look for Indian movie patterns
-    desi_patterns = ["2025", "2024", "2023"]  # Recent Indian movies
-    indian_keywords = ["bahubali", "kantara", "akhanda", "jolly", "de-de-pyaar",
-                       "saali", "haq", "thamma", "kaantha", "mass-jathara",
-                       "andhra", "dominic", "saiyaara", "eko", "raat-akeli"]
-
-    desi_cursor = db.movies.find(
-        {"rating": {"$gte": 5.0}},
-        {"_id": 1, "title": 1}
-    ).sort("rating", -1).limit(200)
-    all_movies = await desi_cursor.to_list(length=200)
-
-    desi_slugs = []
-    for m in all_movies:
-        slug = m["_id"]
-        if any(kw in slug for kw in indian_keywords):
-            desi_slugs.append(slug)
-        if len(desi_slugs) >= 25:
-            break
-
-    # Update Desi Hits list
-    for lst in CURATED_LISTS:
-        if lst["_id"] == "desi-hits":
-            lst["movie_slugs"] = desi_slugs if desi_slugs else lst["movie_slugs"][:15]
-            break
 
     # Insert or update lists
     inserted = 0

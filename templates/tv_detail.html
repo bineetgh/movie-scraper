@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "TVSeries",
+    "name": "{{ show.title }}",
+    "description": "{{ show.synopsis | default('') | e }}",
+    "datePublished": "{{ show.year }}",
+    {% if show.rating %}"aggregateRating": {"@type": "AggregateRating", "ratingValue": {{ show.rating }}},{% endif %}
+    "url": "{{ base_url }}{{ show.canonical_url }}"
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<section>
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb">
+        <ol>
+            <li><a href="/">Home</a></li>
+            <li><a href="/tv/browse">TV Shows</a></li>
+            <li><span>{{ show.title }}</span></li>
+        </ol>
+    </nav>
+
+    <!-- Show Detail Hero -->
+    <div class="movie-detail-hero">
+        {% if show.poster_url %}
+        <img src="{{ show.poster_url }}"
+             alt="{{ show.title }} poster"
+             class="movie-poster-large">
+        {% else %}
+        <div class="movie-poster-large" style="display: flex; align-items: center; justify-content: center; font-size: 5rem; color: var(--text-muted); background: var(--bg-surface);">
+            📺
+        </div>
+        {% endif %}
+
+        <div class="movie-detail-info">
+            <h1>{{ show.title }}</h1>
+
+            <div class="movie-meta">
+                {% if show.year %}<span>{{ show.year }}</span>{% endif %}
+                {% if show.rating %}<span class="rating">{{ show.rating }} IMDb</span>{% endif %}
+                {% if show.seasons_count %}<span>{{ show.seasons_count }} season{{ 's' if show.seasons_count != 1 else '' }}</span>{% endif %}
+                {% if show.status %}<span class="status-badge">{{ show.status }}</span>{% endif %}
+            </div>
+
+            {% if show.genres %}
+            <div class="movie-genres">
+                {% for genre in show.genres %}
+                <a href="/genre/{{ genre | lower | replace(' ', '-') }}" class="genre-tag">{{ genre }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if show.creator %}
+            <p class="director"><strong>Created by:</strong> {{ show.creator }}</p>
+            {% endif %}
+
+            {% if show.synopsis %}
+            <p class="synopsis">{{ show.synopsis }}</p>
+            {% endif %}
+
+            {% if show.cast %}
+            <div class="cast">
+                <h3>Cast</h3>
+                <p>{{ show.cast[:8] | join(', ') }}{% if show.cast | length > 8 %}...{% endif %}</p>
+            </div>
+            {% endif %}
+
+            <!-- Streaming Availability -->
+            {% if show.streaming.has_any_offer() %}
+            <div class="streaming-availability">
+                <h3>Where to Watch</h3>
+
+                {% if show.streaming.free_offers %}
+                <div class="offer-section">
+                    <h4>Free</h4>
+                    <div class="offer-buttons">
+                        {% for offer in show.streaming.free_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-free">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                            <span class="type">Free with Ads</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if show.streaming.subscription_offers %}
+                <div class="offer-section">
+                    <h4>Subscription</h4>
+                    <div class="offer-buttons">
+                        {% for offer in show.streaming.subscription_offers %}
+                        <a href="{{ offer.url }}" target="_blank" rel="noopener" class="offer-btn offer-btn-sub">
+                            <span class="provider">{{ offer.provider_name }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Related Shows -->
+    {% if related_shows %}
+    <div class="related-movies">
+        <h2>Similar TV Shows</h2>
+        <div class="movies-grid">
+            {% for related in related_shows %}
+            <article class="movie-card">
+                <a href="{{ related.canonical_url }}">
+                    <div class="poster-container">
+                        {% if related.poster_url %}
+                        <img src="{{ related.poster_url }}"
+                             alt="{{ related.title }} poster"
+                             loading="lazy"
+                             class="movie-poster">
+                        {% else %}
+                        <div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">
+                            📺
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="movie-info">
+                        <h3 class="movie-title">{{ related.title }}</h3>
+                        <div class="movie-meta">
+                            {% if related.year %}<span>{{ related.year }}</span>{% endif %}
+                            {% if related.rating %}<span class="movie-rating">{{ related.rating }} IMDb</span>{% endif %}
+                        </div>
+                    </div>
+                </a>
+            </article>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -36,8 +36,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Theme - prevent flash of wrong theme -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('watchlazyTheme') || 'dark';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+
     <!-- Styles -->
-    <link rel="stylesheet" href="/static/css/styles.css?v=4">
+    <link rel="stylesheet" href="/static/css/styles.css?v=6">
 
     <!-- Structured Data -->
     {% block structured_data %}{% endblock %}
@@ -78,6 +86,7 @@
                     <a href="/for-me" class="nav-link {{ 'active' if active_tab == 'for-me' else '' }}">For Me</a>
                     <a href="/random-picks" class="nav-link {{ 'active' if active_tab == 'random' else '' }}">Random</a>
                     <a href="/top-rated" class="nav-link {{ 'active' if active_tab == 'top-rated' else '' }}">Top Rated</a>
+                    <a href="/tv/browse" class="nav-link {{ 'active' if active_tab == 'tv' else '' }}">TV Shows</a>
                     <div class="nav-dropdown">
                         <a href="/browse" class="nav-link {{ 'active' if active_tab == 'browse' else '' }}">
                             Browse
@@ -124,8 +133,9 @@
                     {% endif %}
                 </nav>
 
-                <form action="/search" method="get" class="search-box">
-                    <input type="text" name="q" placeholder="Search..." value="{{ query | default('') }}">
+                <form action="/search" method="get" class="search-box" autocomplete="off">
+                    <input type="text" name="q" placeholder="Search..." value="{{ query | default('') }}" id="searchInput">
+                    <div class="search-autocomplete" id="searchAutocomplete"></div>
                     <button type="submit" aria-label="Search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
@@ -133,6 +143,16 @@
                         </svg>
                     </button>
                 </form>
+
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/>
+                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                </button>
 
                 <button class="hamburger" id="hamburger" aria-label="Menu">
                     <span></span>
@@ -210,7 +230,7 @@
 
     <div class="toast" id="toast"></div>
 
-    <script src="/static/js/app.js?v=4"></script>
+    <script src="/static/js/app.js?v=6"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

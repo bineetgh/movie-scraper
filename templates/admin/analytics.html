@@ -1,0 +1,351 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Analytics - Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Analytics Dashboard</h1>
+    <p>Site traffic and engagement metrics</p>
+</div>
+
+<!-- Period Selector -->
+<div class="period-selector">
+    <a href="?days=1" class="period-btn {{ 'active' if days == 1 else '' }}">Today</a>
+    <a href="?days=7" class="period-btn {{ 'active' if days == 7 else '' }}">Last 7 Days</a>
+    <a href="?days=30" class="period-btn {{ 'active' if days == 30 else '' }}">Last 30 Days</a>
+</div>
+
+<!-- Overview Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_views | default(0) }}</div>
+        <div class="stat-label">Page Views</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_searches | default(0) }}</div>
+        <div class="stat-label">Searches</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.unique_movies_viewed | default(0) }}</div>
+        <div class="stat-label">Movies Viewed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ total_movies | default(0) }}</div>
+        <div class="stat-label">Total Movies</div>
+    </div>
+</div>
+
+<div class="analytics-grid">
+    <!-- Popular Movies -->
+    <div class="analytics-card">
+        <h3>Popular Movies</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Movie</th>
+                    <th>Views</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movie in popular_movies %}
+                <tr>
+                    <td>
+                        <a href="/movie/{{ movie.slug }}" target="_blank">{{ movie.slug }}</a>
+                    </td>
+                    <td>{{ movie.views }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="empty">No data yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Popular Searches -->
+    <div class="analytics-card">
+        <h3>Top Searches</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Count</th>
+                    <th>Avg Results</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for search in popular_searches %}
+                <tr>
+                    <td>{{ search.query }}</td>
+                    <td>{{ search.count }}</td>
+                    <td>{{ search.avg_results }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="empty">No data yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Zero Result Searches (Content Gaps) -->
+    <div class="analytics-card">
+        <h3>Content Gaps (Zero Results)</h3>
+        <p class="card-subtitle">Searches that returned no results - potential content to add</p>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Query</th>
+                    <th>Searches</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for search in zero_result_searches %}
+                <tr>
+                    <td>{{ search.query }}</td>
+                    <td>{{ search.count }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="empty">All searches found results!</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Top Pages -->
+    <div class="analytics-card">
+        <h3>Top Pages</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>Views</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for page in top_pages %}
+                <tr>
+                    <td>{{ page.path }}</td>
+                    <td>{{ page.views }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="empty">No data yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Traffic Chart -->
+<div class="analytics-card full-width">
+    <h3>Traffic Over Time</h3>
+    <div class="chart-container">
+        <canvas id="trafficChart"></canvas>
+    </div>
+</div>
+
+<!-- Hourly Traffic Pattern -->
+<div class="analytics-card full-width">
+    <h3>Traffic by Hour (Last 24h)</h3>
+    <div class="chart-container">
+        <canvas id="hourlyChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Traffic Over Time Chart
+const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+const trafficData = {{ views_by_day | tojson }};
+
+new Chart(trafficCtx, {
+    type: 'line',
+    data: {
+        labels: trafficData.map(d => d.date),
+        datasets: [{
+            label: 'Page Views',
+            data: trafficData.map(d => d.views),
+            borderColor: '#FF4757',
+            backgroundColor: 'rgba(255, 71, 87, 0.1)',
+            fill: true,
+            tension: 0.4,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Hourly Traffic Chart
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+const hourlyData = {{ views_by_hour | tojson }};
+
+new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+        labels: hourlyData.map(d => d.hour + ':00'),
+        datasets: [{
+            label: 'Views',
+            data: hourlyData.map(d => d.views),
+            backgroundColor: '#FFA502',
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+</script>
+
+<style>
+.period-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.period-btn {
+    padding: 8px 20px;
+    background: var(--bg-elevated);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.period-btn:hover {
+    border-color: var(--primary);
+}
+
+.period-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.analytics-card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.analytics-card h3 {
+    margin: 0 0 15px;
+    font-size: 1.1rem;
+}
+
+.analytics-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.card-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: -10px 0 15px;
+}
+
+.data-table {
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.data-table td {
+    padding: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.data-table td.empty {
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.data-table a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.data-table a:hover {
+    text-decoration: underline;
+}
+
+.chart-container {
+    height: 250px;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
