@@ -6,14 +6,22 @@
     'use strict';
 
     // ========== Hide Loading Screen ==========
+    var loadStart = window.loadStart || Date.now();
+    var MIN_LOADER_TIME = 800; // Show loader for at least 800ms
+
     function hideLoadingScreen() {
         const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) {
+        if (!loadingScreen) return;
+
+        const elapsed = Date.now() - loadStart;
+        const delay = Math.max(0, MIN_LOADER_TIME - elapsed);
+
+        setTimeout(() => {
             loadingScreen.classList.add('hidden');
             setTimeout(() => {
                 loadingScreen.style.display = 'none';
-            }, 400);
-        }
+            }, 300);
+        }, delay);
     }
 
     // Hide loading screen when DOM is ready
