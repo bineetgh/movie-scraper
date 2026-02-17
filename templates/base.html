@@ -60,6 +60,40 @@
     </script>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <svg class="loading-logo-icon" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="loadingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FF4757"/>
+                            <stop offset="100%" style="stop-color:#FFA502"/>
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="30" cy="30" rx="28" ry="18" stroke="url(#loadingGradient)" stroke-width="3" fill="none"/>
+                    <path d="M2 30 Q30 5 58 30" stroke="url(#loadingGradient)" stroke-width="3" fill="rgba(15,15,26,0.9)"/>
+                    <path d="M24 22 L24 38 L40 30 Z" fill="url(#loadingGradient)"/>
+                </svg>
+            </div>
+            <div class="loading-text" id="loadingText">Exploring</div>
+            <div class="loading-dots">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function() {
+            var messages = ['Exploring', 'Discovering', 'Curating', 'Preparing'];
+            var idx = 0;
+            var textEl = document.getElementById('loadingText');
+            setInterval(function() {
+                idx = (idx + 1) % messages.length;
+                if (textEl) textEl.textContent = messages[idx];
+            }, 800);
+        })();
+    </script>
+
     <div class="container">
         <header>
             <div class="header-content">

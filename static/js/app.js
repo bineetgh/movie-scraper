@@ -5,6 +5,24 @@
 (function() {
     'use strict';
 
+    // ========== Hide Loading Screen ==========
+    function hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 400);
+        }
+    }
+
+    // Hide loading screen when DOM is ready
+    if (document.readyState === 'complete') {
+        hideLoadingScreen();
+    } else {
+        window.addEventListener('load', hideLoadingScreen);
+    }
+
     const WATCHED_KEY = 'watchlazyWatched';
     const REACTIONS_KEY = 'watchlazyReactions';
 
