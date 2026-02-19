@@ -162,9 +162,9 @@ class MovieRepository:
         return [Movie.from_document(doc) for doc in docs]
 
     async def get_free_movies(self, limit: int = 50) -> List[Movie]:
-        """Get free movies (is_free=True)."""
+        """Get free movies (has_free=True)."""
         cursor = self.movies.find(
-            {"is_free": True}
+            {"has_free": True}
         ).sort([("rating", DESCENDING)]).limit(limit)
         docs = await cursor.to_list(length=limit)
         return [Movie.from_document(doc) for doc in docs]
