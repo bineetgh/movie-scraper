@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import random
+import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -220,6 +221,10 @@ app.add_middleware(
 )
 
 
+# Scrape interval - only scrape if last scrape was > 7 days ago
+SCRAPE_INTERVAL_SECONDS = 7 * 24 * 3600  # 7 days
+
+
 # --- Cache Layer with File Persistence ---
 class MovieCache:
     """Cache with in-memory + file persistence."""
@@ -228,6 +233,7 @@ class MovieCache:
         self.ttl = ttl_seconds
         self._movies: List[Movie] = []
         self._last_fetch: float = 0
+        self._last_scrape: float = 0  # Track last full scrape separately
         self._is_fetching: bool = False
         self._load_from_file()
 
@@ -236,14 +242,12 @@ class MovieCache:
         try:
             if CACHE_FILE.exists():
                 file_age = time.time() - os.path.getmtime(CACHE_FILE)
-                if file_age < self.ttl:
-                    with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                        data = json.load(f)
-                    self._movies = [Movie.from_dict(m) for m in data.get("movies", [])]
-                    self._last_fetch = data.get("timestamp", time.time() - file_age)
-                    print(f"Loaded {len(self._movies)} movies from cache file (age: {file_age/3600:.1f}h)")
-                else:
-                    print(f"Cache file is stale ({file_age/3600:.1f}h old), will refresh")
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self._movies = [Movie.from_dict(m) for m in data.get("movies", [])]
+                self._last_fetch = data.get("timestamp", time.time() - file_age)
+                self._last_scrape = data.get("last_scrape", self._last_fetch)
+                print(f"Loaded {len(self._movies)} movies from cache file (age: {file_age/3600:.1f}h)")
         except Exception as e:
             print(f"Error loading cache file: {e}")
 
@@ -253,6 +257,7 @@ class MovieCache:
             CACHE_DIR.mkdir(parents=True, exist_ok=True)
             data = {
                 "timestamp": self._last_fetch,
+                "last_scrape": self._last_scrape,
                 "movies": [m.to_dict() for m in self._movies]
             }
             with open(CACHE_FILE, "w", encoding="utf-8") as f:
@@ -264,12 +269,18 @@ class MovieCache:
     def is_stale(self) -> bool:
         return time.time() - self._last_fetch > self.ttl
 
+    def needs_scrape(self) -> bool:
+        """Check if a new scrape is needed (> 7 days since last scrape)."""
+        return time.time() - self._last_scrape > SCRAPE_INTERVAL_SECONDS
+
     def get_movies(self) -> List[Movie]:
         return self._movies
 
-    def set_movies(self, movies: List[Movie]):
+    def set_movies(self, movies: List[Movie], is_scrape: bool = True):
         self._movies = movies
         self._last_fetch = time.time()
+        if is_scrape:
+            self._last_scrape = time.time()
         self.save_to_file()
 
     def is_empty(self) -> bool:
@@ -280,16 +291,17 @@ class MovieCache:
 cache = MovieCache(ttl_seconds=CACHE_TTL_SECONDS)
 
 
-def fetch_and_cache_movies(
+def _do_background_scrape(
     limit: int = 500,
     include_archive: bool = True,
     enrich_with_tmdb: bool = True
-) -> List[Movie]:
-    """Fetch movies from sources and update cache."""
+):
+    """Background thread function to fetch movies from sources."""
     if cache._is_fetching:
-        return cache.get_movies()
+        return
 
     cache._is_fetching = True
+    logger.info("Starting background scrape...")
     try:
         all_movies = []
 
@@ -308,22 +320,47 @@ def fetch_and_cache_movies(
         if enrich_with_tmdb:
             tmdb = TMDBClient()
             if tmdb.is_available:
-                print(f"Enriching {len(all_movies)} movies with TMDB data...")
+                logger.info(f"Enriching {len(all_movies)} movies with TMDB data...")
                 for i, movie in enumerate(all_movies):
                     all_movies[i] = tmdb.enrich_movie(movie)
                     if (i + 1) % 50 == 0:
-                        print(f"Enriched {i + 1}/{len(all_movies)} movies")
+                        logger.info(f"Enriched {i + 1}/{len(all_movies)} movies")
 
-        cache.set_movies(all_movies)
-        return all_movies
+        cache.set_movies(all_movies, is_scrape=True)
+        logger.info(f"Background scrape completed: {len(all_movies)} movies")
+
+        # Sync to MongoDB in background (using new event loop for thread)
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(sync_movies_to_mongodb(all_movies))
+            loop.close()
+        except Exception as sync_err:
+            logger.error(f"Background MongoDB sync failed: {sync_err}")
+    except Exception as e:
+        logger.error(f"Background scrape failed: {e}")
     finally:
         cache._is_fetching = False
 
 
+def start_background_scrape():
+    """Start scraping in a background thread (non-blocking)."""
+    if cache._is_fetching:
+        logger.info("Scrape already in progress, skipping...")
+        return
+    thread = threading.Thread(target=_do_background_scrape, daemon=True)
+    thread.start()
+    logger.info("Background scrape thread started")
+
+
 def get_cached_movies() -> List[Movie]:
-    """Get movies from cache, fetching if needed."""
-    if cache.is_empty() or cache.is_stale():
-        return fetch_and_cache_movies()
+    """Get movies from cache. Triggers background scrape if needed (> 7 days)."""
+    # Check if we need to scrape (> 7 days since last scrape)
+    if cache.needs_scrape() and not cache._is_fetching:
+        logger.info("Cache needs scrape (> 7 days), starting background scrape...")
+        start_background_scrape()
+
+    # Always return immediately with whatever we have (never block)
     return cache.get_movies()
 
 
