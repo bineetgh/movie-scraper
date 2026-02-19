@@ -31,6 +31,19 @@
     </div>
 </section>
 
+<!-- Top Rated Section (SSR - loads immediately) -->
+<section class="genre-section" id="topRatedSection">
+    <div class="genre-section-header">
+        <h2>Top Rated</h2>
+        <a href="/top-rated">See All</a>
+    </div>
+    <div class="movies-row">
+        {% for movie in top_rated_movies %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+
 <!-- For Me Section (personalized - client side) -->
 <section class="genre-section" id="forMeSection" style="display: none;">
     <div class="genre-section-header">
@@ -40,66 +53,50 @@
     <div class="movies-row" id="forMeMovies"></div>
 </section>
 
-<!-- Top Rated Section (lazy loaded) -->
-<section class="genre-section lazy-section" data-section="top-rated">
-    <div class="genre-section-header">
-        <h2>Top Rated</h2>
-        <a href="/top-rated">See All</a>
-    </div>
-    <div class="movies-row skeleton-row">
-        {% for i in range(6) %}
-        <div class="movie-card skeleton">
-            <div class="skeleton-poster"></div>
-            <div class="skeleton-info">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-meta"></div>
-            </div>
+<!-- Lazy loaded sections container -->
+<div id="lazySectionsContainer">
+    <!-- Skeleton placeholders for curated collections -->
+    {% for clist in curated_lists %}
+    <section class="genre-section skeleton-section" data-section="collection-{{ clist.slug }}">
+        <div class="genre-section-header">
+            <h2>{{ clist.label }}</h2>
+            <a href="/list/{{ clist.slug }}">See All</a>
         </div>
-        {% endfor %}
-    </div>
-</section>
-
-<!-- Curated Collections (lazy loaded) -->
-{% for clist in curated_lists %}
-<section class="genre-section lazy-section" data-section="collection-{{ clist.slug }}">
-    <div class="genre-section-header">
-        <h2>{{ clist.label }}</h2>
-        <a href="/list/{{ clist.slug }}">See All</a>
-    </div>
-    <div class="movies-row skeleton-row">
-        {% for i in range(6) %}
-        <div class="movie-card skeleton">
-            <div class="skeleton-poster"></div>
-            <div class="skeleton-info">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-meta"></div>
+        <div class="movies-row skeleton-row">
+            {% for i in range(6) %}
+            <div class="movie-card skeleton">
+                <div class="skeleton-poster"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-meta"></div>
+                </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</section>
-{% endfor %}
+    </section>
+    {% endfor %}
 
-<!-- Recently Added (lazy loaded) -->
-<section class="genre-section lazy-section" data-section="recent">
-    <div class="genre-section-header">
-        <h2>Recently Added</h2>
-        <a href="/browse">Browse All</a>
-    </div>
-    <div class="movies-row skeleton-row">
-        {% for i in range(6) %}
-        <div class="movie-card skeleton">
-            <div class="skeleton-poster"></div>
-            <div class="skeleton-info">
-                <div class="skeleton-title"></div>
-                <div class="skeleton-meta"></div>
+    <!-- Recently Added skeleton -->
+    <section class="genre-section skeleton-section" data-section="recent">
+        <div class="genre-section-header">
+            <h2>Recently Added</h2>
+            <a href="/browse">Browse All</a>
+        </div>
+        <div class="movies-row skeleton-row">
+            {% for i in range(6) %}
+            <div class="movie-card skeleton">
+                <div class="skeleton-poster"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-meta"></div>
+                </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
-</section>
+    </section>
+</div>
 
-{% if not free_movies %}
+{% if not free_movies and not top_rated_movies %}
 <div class="no-results">
     <div class="no-results-icon">🎬</div>
     <h3>No movies available</h3>
@@ -113,10 +110,7 @@
 (function() {
     'use strict';
 
-    // ========== Lazy Loading Sections ==========
-    const loadedSections = new Set();
-    const loadingPromises = {};
-
+    // ========== Movie Card Creation ==========
     function createMovieCard(movie) {
         const article = document.createElement('article');
         article.className = 'movie-card';
@@ -150,125 +144,47 @@
         return article;
     }
 
-    async function loadSection(section) {
-        const sectionName = section.dataset.section;
-        if (loadedSections.has(sectionName)) return;
+    // ========== Batch Load All Sections ==========
+    let allMoviesData = null;
 
-        // Check if already loading
-        if (loadingPromises[sectionName]) {
-            return loadingPromises[sectionName];
-        }
+    async function loadAllSections() {
+        try {
+            const response = await fetch('/api/home/sections/all');
+            const data = await response.json();
 
-        loadingPromises[sectionName] = (async () => {
-            try {
-                const response = await fetch(`/api/home/section/${sectionName}`);
-                const data = await response.json();
+            // Store for-me data
+            allMoviesData = data.for_me_movies || [];
 
-                if (data.movies && data.movies.length > 0) {
-                    const row = section.querySelector('.movies-row');
+            // Populate each section
+            data.sections.forEach(section => {
+                const sectionEl = document.querySelector(`[data-section="${section.name}"]`);
+                if (sectionEl && section.movies.length > 0) {
+                    const row = sectionEl.querySelector('.movies-row');
                     row.innerHTML = '';
                     row.classList.remove('skeleton-row');
-
-                    data.movies.forEach(movie => {
+                    section.movies.forEach(movie => {
                         row.appendChild(createMovieCard(movie));
                     });
-
-                    loadedSections.add(sectionName);
-                } else {
-                    // Hide section if no movies
-                    section.style.display = 'none';
+                    sectionEl.classList.remove('skeleton-section');
+                } else if (sectionEl) {
+                    // Hide empty sections
+                    sectionEl.style.display = 'none';
                 }
-            } catch (e) {
-                console.error('Failed to load section:', sectionName, e);
-            } finally {
-                delete loadingPromises[sectionName];
-            }
-        })();
-
-        return loadingPromises[sectionName];
-    }
-
-    function prefetchSection(section) {
-        const sectionName = section.dataset.section;
-        if (loadedSections.has(sectionName) || loadingPromises[sectionName]) return;
-
-        // Use low priority fetch for prefetching
-        loadingPromises[sectionName] = fetch(`/api/home/section/${sectionName}`, { priority: 'low' })
-            .then(r => r.json())
-            .then(data => {
-                // Store for later use
-                section._prefetchedData = data;
-            })
-            .catch(() => {})
-            .finally(() => {
-                delete loadingPromises[sectionName];
             });
+
+            // Initialize For Me section after data is loaded
+            initForMeSection();
+
+        } catch (e) {
+            console.error('Failed to load sections:', e);
+        }
     }
-
-    // Intersection Observer for lazy loading
-    const observerOptions = {
-        root: null,
-        rootMargin: '200px 0px', // Load when 200px away from viewport
-        threshold: 0
-    };
-
-    const sectionObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const section = entry.target;
-
-                // Check if we have prefetched data
-                if (section._prefetchedData) {
-                    const data = section._prefetchedData;
-                    if (data.movies && data.movies.length > 0) {
-                        const row = section.querySelector('.movies-row');
-                        row.innerHTML = '';
-                        row.classList.remove('skeleton-row');
-                        data.movies.forEach(movie => {
-                            row.appendChild(createMovieCard(movie));
-                        });
-                        loadedSections.add(section.dataset.section);
-                    } else {
-                        section.style.display = 'none';
-                    }
-                    delete section._prefetchedData;
-                } else {
-                    loadSection(section);
-                }
-
-                sectionObserver.unobserve(section);
-
-                // Prefetch next 2 sections
-                const allSections = Array.from(document.querySelectorAll('.lazy-section'));
-                const currentIndex = allSections.indexOf(section);
-                for (let i = 1; i <= 2; i++) {
-                    const nextSection = allSections[currentIndex + i];
-                    if (nextSection && !loadedSections.has(nextSection.dataset.section)) {
-                        prefetchSection(nextSection);
-                    }
-                }
-            }
-        });
-    }, observerOptions);
-
-    // Observe all lazy sections
-    document.querySelectorAll('.lazy-section').forEach(section => {
-        sectionObserver.observe(section);
-    });
-
-    // Prefetch first 2 sections immediately after initial render
-    setTimeout(() => {
-        const lazySections = document.querySelectorAll('.lazy-section');
-        if (lazySections[0]) prefetchSection(lazySections[0]);
-        if (lazySections[1]) prefetchSection(lazySections[1]);
-    }, 100);
-
 
     // ========== For Me Section ==========
-    async function initForMeSection() {
+    function initForMeSection() {
         const section = document.getElementById('forMeSection');
         const container = document.getElementById('forMeMovies');
-        if (!section || !container) return;
+        if (!section || !container || !allMoviesData) return;
 
         const WATCHED_KEY = 'watchlazyWatched';
         const REACTIONS_KEY = 'watchlazyReactions';
@@ -279,62 +195,59 @@
         const hasPreferences = Object.keys(reactions).length > 0 || Object.keys(watched).length > 0;
         if (!hasPreferences) return;
 
-        // Fetch all movies for scoring
-        try {
-            const response = await fetch('/api/home/section/for-me');
-            const data = await response.json();
-            const allMovies = data.movies || [];
+        // Calculate genre scores
+        const genreScores = {};
+        const watchedSlugs = {};
 
-            // Calculate genre scores
-            const genreScores = {};
-            const watchedSlugs = {};
+        Object.keys(watched).forEach(slug => {
+            watchedSlugs[slug] = true;
+            (watched[slug].genres || []).forEach(genre => {
+                genreScores[genre] = (genreScores[genre] || 0) + 1;
+            });
+        });
 
-            Object.keys(watched).forEach(slug => {
-                watchedSlugs[slug] = true;
-                (watched[slug].genres || []).forEach(genre => {
-                    genreScores[genre] = (genreScores[genre] || 0) + 1;
+        Object.keys(reactions).forEach(slug => {
+            const data = reactions[slug];
+            const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
+            (data.genres || []).forEach(genre => {
+                genreScores[genre] = (genreScores[genre] || 0) + weight;
+            });
+        });
+
+        // Score and filter movies
+        const scoredMovies = allMoviesData
+            .filter(m => !watchedSlugs[m.slug])
+            .map(m => {
+                let score = 0;
+                (m.genres || []).forEach(g => {
+                    score += (genreScores[g] || 0) * 10;
                 });
-            });
+                if (m.rating) score += m.rating * 2;
+                m.recScore = score;
+                return m;
+            })
+            .filter(m => m.recScore > 0)
+            .sort((a, b) => b.recScore - a.recScore)
+            .slice(0, 12);
 
-            Object.keys(reactions).forEach(slug => {
-                const data = reactions[slug];
-                const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
-                (data.genres || []).forEach(genre => {
-                    genreScores[genre] = (genreScores[genre] || 0) + weight;
-                });
-            });
+        if (scoredMovies.length === 0) return;
 
-            // Score and filter movies
-            const scoredMovies = allMovies
-                .filter(m => !watchedSlugs[m.slug])
-                .map(m => {
-                    let score = 0;
-                    (m.genres || []).forEach(g => {
-                        score += (genreScores[g] || 0) * 10;
-                    });
-                    if (m.rating) score += m.rating * 2;
-                    m.recScore = score;
-                    return m;
-                })
-                .filter(m => m.recScore > 0)
-                .sort((a, b) => b.recScore - a.recScore)
-                .slice(0, 12);
-
-            if (scoredMovies.length === 0) return;
-
-            // Show section and populate
-            section.style.display = 'block';
-            scoredMovies.forEach(movie => {
-                container.appendChild(createMovieCard(movie));
-            });
-
-        } catch (e) {
-            console.error('Failed to load For Me section:', e);
-        }
+        // Show section and populate
+        section.style.display = 'block';
+        scoredMovies.forEach(movie => {
+            container.appendChild(createMovieCard(movie));
+        });
     }
 
-    // Initialize For Me after a short delay
-    setTimeout(initForMeSection, 500);
+    // ========== Initialize ==========
+    // Load all sections after initial render
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(loadAllSections, 100);
+        });
+    } else {
+        setTimeout(loadAllSections, 100);
+    }
 
 })();
 </script>

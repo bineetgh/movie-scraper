@@ -38,7 +38,11 @@ METADATA_CACHE_TTL = 300  # 5 minutes
 # Home page cache (full HTML response)
 _home_page_cache: Optional[str] = None
 _home_page_cache_time: float = 0
-HOME_PAGE_CACHE_TTL = 300  # 5 minutes
+HOME_PAGE_CACHE_TTL = 1800  # 30 minutes (for free movies section)
+
+# Section data cache (for lazy loaded sections)
+_section_cache: Dict[str, Tuple[float, List]] = {}  # {section_name: (timestamp, data)}
+SECTION_CACHE_TTL = 86400  # 24 hours for other sections
 
 
 def load_env_file():
@@ -597,39 +601,51 @@ def deduplicate_movies(cache_results: List[Movie], online_results: List[Movie]) 
 
 @app.get("/")
 async def home(request: Request):
-    """SSR home page - only loads free movies initially, rest lazy loaded."""
+    """SSR home page - loads Free Movies + Top Rated initially, rest lazy loaded."""
     global _home_page_cache, _home_page_cache_time
 
-    # Return cached HTML if valid
+    # Return cached HTML if valid (30 min cache)
     if _home_page_cache and (time.time() - _home_page_cache_time) < HOME_PAGE_CACHE_TTL:
         return HTMLResponse(content=_home_page_cache)
 
     curated_lists = await get_curated_lists_for_menu()
 
-    # Only fetch free movies for initial load (fast!)
+    # Fetch Free Movies and Top Rated in parallel for SSR
     free_movies = []
-    if movie_repo is not None:
-        try:
-            all_free = await movie_repo.get_free_movies(limit=50)
-            # Pick 10 random from free movies
+    top_movies = []
+
+    async def fetch_free():
+        nonlocal free_movies
+        if movie_repo is not None:
+            try:
+                all_free = await movie_repo.get_free_movies(limit=50)
+                if all_free:
+                    free_movies = random.sample(all_free, min(10, len(all_free)))
+            except Exception as e:
+                logger.error(f"MongoDB query failed: {e}")
+        if not free_movies:
+            movies = get_cached_movies()
+            all_free = [m for m in movies if m.is_free]
             if all_free:
                 free_movies = random.sample(all_free, min(10, len(all_free)))
-        except Exception as e:
-            logger.error(f"MongoDB query failed: {e}")
 
-    if not free_movies:
-        movies = get_cached_movies()
-        all_free = [m for m in movies if m.is_free]
-        if all_free:
-            free_movies = random.sample(all_free, min(10, len(all_free)))
+    async def fetch_top_rated():
+        nonlocal top_movies
+        if movie_repo is not None:
+            try:
+                top_movies = await movie_repo.get_top_rated(limit=12)
+            except Exception as e:
+                logger.error(f"MongoDB query failed: {e}")
+        if not top_movies:
+            movies = get_cached_movies()
+            top_movies = sorted([m for m in movies if m.rating], key=lambda m: m.rating or 0, reverse=True)[:12]
 
-    # Get list of collection slugs for lazy loading
-    collection_slugs = [c.slug for c in curated_lists] if curated_lists else []
+    await asyncio.gather(fetch_free(), fetch_top_rated())
 
     response = templates.TemplateResponse("home.html", {
         "request": request,
         "free_movies": free_movies,
-        "collection_slugs": collection_slugs,
+        "top_rated_movies": top_movies,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
         "page_title": "Watchlazy - Free Movies, Zero Effort",
@@ -638,7 +654,7 @@ async def home(request: Request):
         "active_tab": "home",
     })
 
-    # Cache the rendered HTML
+    # Cache the rendered HTML (30 min)
     _home_page_cache = response.body.decode()
     _home_page_cache_time = time.time()
 
@@ -647,20 +663,86 @@ async def home(request: Request):
 
 # --- Lazy Loading API Endpoints ---
 
+def movie_to_dict(m):
+    """Convert movie object to dict for JSON response."""
+    return {
+        "slug": m.slug,
+        "title": m.title,
+        "year": m.year,
+        "rating": m.rating,
+        "poster_url": m.poster_url,
+        "genres": m.genres,
+        "is_free": m.is_free,
+    }
+
+
+async def get_section_data(section_name: str) -> List:
+    """Get section data with 24-hour caching."""
+    global _section_cache
+
+    # Check cache
+    if section_name in _section_cache:
+        cache_time, data = _section_cache[section_name]
+        if (time.time() - cache_time) < SECTION_CACHE_TTL:
+            return data
+
+    # Fetch fresh data
+    movies = []
+
+    if section_name == "recent":
+        if movie_repo is not None:
+            try:
+                movies = await movie_repo.get_all(sort_by="recent", limit=12)
+            except Exception:
+                pass
+
+    elif section_name.startswith("collection-"):
+        slug = section_name.replace("collection-", "")
+        if curated_repo is not None:
+            try:
+                movies = await curated_repo.get_movies_for_list(slug, limit=12)
+            except Exception:
+                pass
+
+    # Cache the result (24 hours)
+    _section_cache[section_name] = (time.time(), movies)
+    return movies
+
+
+@app.get("/api/home/sections/all")
+async def get_all_home_sections():
+    """Batch API endpoint to fetch all remaining sections at once (cached 24hr)."""
+    curated_lists = await get_curated_lists_for_menu()
+
+    # Build list of sections to fetch
+    section_names = ["recent"]
+    for clist in curated_lists:
+        section_names.append(f"collection-{clist.slug}")
+
+    # Fetch all sections in parallel
+    async def fetch_section(name):
+        movies = await get_section_data(name)
+        return {
+            "name": name,
+            "label": name.replace("collection-", "").replace("-", " ").title() if name.startswith("collection-") else "Recently Added",
+            "movies": [movie_to_dict(m) for m in movies] if movies else []
+        }
+
+    results = await asyncio.gather(*[fetch_section(name) for name in section_names])
+
+    # Also fetch for-me data
+    all_movies = await get_movies_from_db_or_cache()
+    for_me_data = [movie_to_dict(m) for m in all_movies]
+
+    return {
+        "sections": [r for r in results if r["movies"]],
+        "for_me_movies": for_me_data
+    }
+
+
 @app.get("/api/home/section/{section_name}")
 async def get_home_section(section_name: str):
-    """API endpoint for lazy loading home page sections."""
-
-    def movie_to_dict(m):
-        return {
-            "slug": m.slug,
-            "title": m.title,
-            "year": m.year,
-            "rating": m.rating,
-            "poster_url": m.poster_url,
-            "genres": m.genres,
-            "is_free": m.is_free,
-        }
+    """API endpoint for lazy loading individual home page sections."""
 
     if section_name == "top-rated":
         movies = []
@@ -674,31 +756,13 @@ async def get_home_section(section_name: str):
             movies = sorted([m for m in all_movies if m.rating], key=lambda m: m.rating or 0, reverse=True)[:12]
         return {"movies": [movie_to_dict(m) for m in movies]}
 
-    elif section_name == "recent":
-        movies = []
-        if movie_repo is not None:
-            try:
-                movies = await movie_repo.get_all(sort_by="recent", limit=12)
-            except Exception:
-                pass
-        return {"movies": [movie_to_dict(m) for m in movies]}
-
-    elif section_name.startswith("collection-"):
-        slug = section_name.replace("collection-", "")
-        movies = []
-        if curated_repo is not None:
-            try:
-                movies = await curated_repo.get_movies_for_list(slug, limit=12)
-            except Exception:
-                pass
-        return {"movies": [movie_to_dict(m) for m in movies] if movies else []}
-
     elif section_name == "for-me":
-        # Return all movies data for client-side filtering
         all_movies = await get_movies_from_db_or_cache()
         return {"movies": [movie_to_dict(m) for m in all_movies]}
 
-    return {"movies": []}
+    else:
+        movies = await get_section_data(section_name)
+        return {"movies": [movie_to_dict(m) for m in movies] if movies else []}
 
 
 @app.get("/top-rated")
