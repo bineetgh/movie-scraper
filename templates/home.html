@@ -18,61 +18,88 @@
 {% endblock %}
 
 {% block content %}
-<!-- For Me Section (personalized) -->
+<!-- Free Movies Section (SSR - loads immediately) -->
+<section class="genre-section" id="freeMoviesSection">
+    <div class="genre-section-header">
+        <h2>Free Movies to Watch Right Now</h2>
+        <a href="/free-movies">See All</a>
+    </div>
+    <div class="movies-row">
+        {% for movie in free_movies %}
+        {% include "components/movie_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+
+<!-- For Me Section (personalized - client side) -->
 <section class="genre-section" id="forMeSection" style="display: none;">
     <div class="genre-section-header">
         <h2>For You</h2>
         <a href="/for-me">See All</a>
     </div>
-    <div class="movies-row" id="forMeMovies">
-        <!-- Populated by JavaScript -->
-    </div>
+    <div class="movies-row" id="forMeMovies"></div>
 </section>
 
-<!-- Top Rated Section -->
-<section class="genre-section">
+<!-- Top Rated Section (lazy loaded) -->
+<section class="genre-section lazy-section" data-section="top-rated">
     <div class="genre-section-header">
         <h2>Top Rated</h2>
         <a href="/top-rated">See All</a>
     </div>
-    <div class="movies-row">
-        {% for movie in top_rated_movies[:12] %}
-        {% include "components/movie_card.html" %}
+    <div class="movies-row skeleton-row">
+        {% for i in range(6) %}
+        <div class="movie-card skeleton">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-info">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+        </div>
         {% endfor %}
     </div>
 </section>
 
-<!-- Curated Collections -->
-{% for collection in collections %}
-<section class="genre-section">
+<!-- Curated Collections (lazy loaded) -->
+{% for clist in curated_lists %}
+<section class="genre-section lazy-section" data-section="collection-{{ clist.slug }}">
     <div class="genre-section-header">
-        <h2>{{ collection.list.label }}</h2>
-        <a href="/list/{{ collection.list.slug }}">See All</a>
+        <h2>{{ clist.label }}</h2>
+        <a href="/list/{{ clist.slug }}">See All</a>
     </div>
-    <div class="movies-row">
-        {% for movie in collection.movies[:12] %}
-        {% include "components/movie_card.html" %}
+    <div class="movies-row skeleton-row">
+        {% for i in range(6) %}
+        <div class="movie-card skeleton">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-info">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+        </div>
         {% endfor %}
     </div>
 </section>
 {% endfor %}
 
-<!-- Recently Added (if available) -->
-{% if recent_movies %}
-<section class="genre-section">
+<!-- Recently Added (lazy loaded) -->
+<section class="genre-section lazy-section" data-section="recent">
     <div class="genre-section-header">
         <h2>Recently Added</h2>
         <a href="/browse">Browse All</a>
     </div>
-    <div class="movies-row">
-        {% for movie in recent_movies[:12] %}
-        {% include "components/movie_card.html" %}
+    <div class="movies-row skeleton-row">
+        {% for i in range(6) %}
+        <div class="movie-card skeleton">
+            <div class="skeleton-poster"></div>
+            <div class="skeleton-info">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-meta"></div>
+            </div>
+        </div>
         {% endfor %}
     </div>
 </section>
-{% endif %}
 
-{% if not collections and not top_rated_movies %}
+{% if not free_movies %}
 <div class="no-results">
     <div class="no-results-icon">🎬</div>
     <h3>No movies available</h3>
@@ -83,12 +110,162 @@
 
 {% block scripts %}
 <script>
-// Pass movies data to JavaScript for "For Me" section
-window.allMoviesData = {{ movies_json | safe }};
-
-// Initialize For Me section on homepage
 (function() {
-    function initHomeForMe() {
+    'use strict';
+
+    // ========== Lazy Loading Sections ==========
+    const loadedSections = new Set();
+    const loadingPromises = {};
+
+    function createMovieCard(movie) {
+        const article = document.createElement('article');
+        article.className = 'movie-card';
+        article.dataset.movieSlug = movie.slug;
+        article.dataset.genres = (movie.genres || []).join(',');
+
+        let posterHtml = movie.poster_url
+            ? `<img src="${movie.poster_url}" alt="${movie.title} poster" loading="lazy" class="movie-poster">`
+            : `<div class="movie-poster" style="display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--text-muted);">🎬</div>`;
+
+        let badgeHtml = '';
+        if (movie.is_free) {
+            badgeHtml = '<span class="availability-badge free">Free</span>';
+        }
+
+        article.innerHTML = `
+            <a href="/movie/${movie.slug}">
+                <div class="poster-container">
+                    ${posterHtml}
+                    ${badgeHtml}
+                </div>
+                <div class="movie-info">
+                    <h3 class="movie-title">${movie.title}</h3>
+                    <div class="movie-meta">
+                        ${movie.year ? `<span>${movie.year}</span>` : ''}
+                        ${movie.rating ? `<span class="movie-rating">${movie.rating} IMDb</span>` : ''}
+                    </div>
+                </div>
+            </a>
+        `;
+        return article;
+    }
+
+    async function loadSection(section) {
+        const sectionName = section.dataset.section;
+        if (loadedSections.has(sectionName)) return;
+
+        // Check if already loading
+        if (loadingPromises[sectionName]) {
+            return loadingPromises[sectionName];
+        }
+
+        loadingPromises[sectionName] = (async () => {
+            try {
+                const response = await fetch(`/api/home/section/${sectionName}`);
+                const data = await response.json();
+
+                if (data.movies && data.movies.length > 0) {
+                    const row = section.querySelector('.movies-row');
+                    row.innerHTML = '';
+                    row.classList.remove('skeleton-row');
+
+                    data.movies.forEach(movie => {
+                        row.appendChild(createMovieCard(movie));
+                    });
+
+                    loadedSections.add(sectionName);
+                } else {
+                    // Hide section if no movies
+                    section.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Failed to load section:', sectionName, e);
+            } finally {
+                delete loadingPromises[sectionName];
+            }
+        })();
+
+        return loadingPromises[sectionName];
+    }
+
+    function prefetchSection(section) {
+        const sectionName = section.dataset.section;
+        if (loadedSections.has(sectionName) || loadingPromises[sectionName]) return;
+
+        // Use low priority fetch for prefetching
+        loadingPromises[sectionName] = fetch(`/api/home/section/${sectionName}`, { priority: 'low' })
+            .then(r => r.json())
+            .then(data => {
+                // Store for later use
+                section._prefetchedData = data;
+            })
+            .catch(() => {})
+            .finally(() => {
+                delete loadingPromises[sectionName];
+            });
+    }
+
+    // Intersection Observer for lazy loading
+    const observerOptions = {
+        root: null,
+        rootMargin: '200px 0px', // Load when 200px away from viewport
+        threshold: 0
+    };
+
+    const sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const section = entry.target;
+
+                // Check if we have prefetched data
+                if (section._prefetchedData) {
+                    const data = section._prefetchedData;
+                    if (data.movies && data.movies.length > 0) {
+                        const row = section.querySelector('.movies-row');
+                        row.innerHTML = '';
+                        row.classList.remove('skeleton-row');
+                        data.movies.forEach(movie => {
+                            row.appendChild(createMovieCard(movie));
+                        });
+                        loadedSections.add(section.dataset.section);
+                    } else {
+                        section.style.display = 'none';
+                    }
+                    delete section._prefetchedData;
+                } else {
+                    loadSection(section);
+                }
+
+                sectionObserver.unobserve(section);
+
+                // Prefetch next 2 sections
+                const allSections = Array.from(document.querySelectorAll('.lazy-section'));
+                const currentIndex = allSections.indexOf(section);
+                for (let i = 1; i <= 2; i++) {
+                    const nextSection = allSections[currentIndex + i];
+                    if (nextSection && !loadedSections.has(nextSection.dataset.section)) {
+                        prefetchSection(nextSection);
+                    }
+                }
+            }
+        });
+    }, observerOptions);
+
+    // Observe all lazy sections
+    document.querySelectorAll('.lazy-section').forEach(section => {
+        sectionObserver.observe(section);
+    });
+
+    // Prefetch first 2 sections immediately after initial render
+    setTimeout(() => {
+        const lazySections = document.querySelectorAll('.lazy-section');
+        if (lazySections[0]) prefetchSection(lazySections[0]);
+        if (lazySections[1]) prefetchSection(lazySections[1]);
+    }, 100);
+
+
+    // ========== For Me Section ==========
+    async function initForMeSection() {
         const section = document.getElementById('forMeSection');
         const container = document.getElementById('forMeMovies');
         if (!section || !container) return;
@@ -99,81 +276,66 @@ window.allMoviesData = {{ movies_json | safe }};
         const watched = JSON.parse(localStorage.getItem(WATCHED_KEY) || '{}');
         const reactions = JSON.parse(localStorage.getItem(REACTIONS_KEY) || '{}');
 
-        // Check if user has preferences
         const hasPreferences = Object.keys(reactions).length > 0 || Object.keys(watched).length > 0;
         if (!hasPreferences) return;
 
-        // Calculate genre scores
-        const genreScores = {};
-        const watchedSlugs = {};
-        Object.keys(watched).forEach(function(slug) {
-            watchedSlugs[slug] = true;
-            (watched[slug].genres || []).forEach(function(genre) {
-                genreScores[genre] = (genreScores[genre] || 0) + 1;
-            });
-        });
+        // Fetch all movies for scoring
+        try {
+            const response = await fetch('/api/home/section/for-me');
+            const data = await response.json();
+            const allMovies = data.movies || [];
 
-        Object.keys(reactions).forEach(function(slug) {
-            const data = reactions[slug];
-            const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
-            (data.genres || []).forEach(function(genre) {
-                genreScores[genre] = (genreScores[genre] || 0) + weight;
-            });
-        });
+            // Calculate genre scores
+            const genreScores = {};
+            const watchedSlugs = {};
 
-        // Score and filter movies
-        const allMovies = window.allMoviesData || [];
-        const scoredMovies = allMovies
-            .filter(function(m) { return !watchedSlugs[m.slug]; })
-            .map(function(m) {
-                var score = 0;
-                (m.genres || []).forEach(function(g) {
-                    score += (genreScores[g] || 0) * 10;
+            Object.keys(watched).forEach(slug => {
+                watchedSlugs[slug] = true;
+                (watched[slug].genres || []).forEach(genre => {
+                    genreScores[genre] = (genreScores[genre] || 0) + 1;
                 });
-                if (m.rating) score += m.rating * 2;
-                m.recScore = score;
-                return m;
-            })
-            .filter(function(m) { return m.recScore > 0; })
-            .sort(function(a, b) { return b.recScore - a.recScore; })
-            .slice(0, 12);
+            });
 
-        if (scoredMovies.length === 0) return;
+            Object.keys(reactions).forEach(slug => {
+                const data = reactions[slug];
+                const weight = data.reaction === 'loved' ? 3 : (data.reaction === 'liked' ? 2 : -1);
+                (data.genres || []).forEach(genre => {
+                    genreScores[genre] = (genreScores[genre] || 0) + weight;
+                });
+            });
 
-        // Show section and populate
-        section.style.display = 'block';
+            // Score and filter movies
+            const scoredMovies = allMovies
+                .filter(m => !watchedSlugs[m.slug])
+                .map(m => {
+                    let score = 0;
+                    (m.genres || []).forEach(g => {
+                        score += (genreScores[g] || 0) * 10;
+                    });
+                    if (m.rating) score += m.rating * 2;
+                    m.recScore = score;
+                    return m;
+                })
+                .filter(m => m.recScore > 0)
+                .sort((a, b) => b.recScore - a.recScore)
+                .slice(0, 12);
 
-        var html = '';
-        scoredMovies.forEach(function(movie) {
-            html += '<article class="movie-card" data-movie-slug="' + movie.slug + '" data-genres="' + (movie.genres || []).join(',') + '">' +
-                '<a href="/movie/' + movie.slug + '">' +
-                '<div class="poster-container">';
+            if (scoredMovies.length === 0) return;
 
-            if (movie.poster_url) {
-                html += '<img src="' + movie.poster_url + '" alt="' + movie.title + ' poster" loading="lazy" class="movie-poster">';
-            } else {
-                html += '<div class="movie-poster" style="display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--text-muted);">🎬</div>';
-            }
+            // Show section and populate
+            section.style.display = 'block';
+            scoredMovies.forEach(movie => {
+                container.appendChild(createMovieCard(movie));
+            });
 
-            html += '</div>' +
-                '<div class="movie-info">' +
-                '<h3 class="movie-title">' + movie.title + '</h3>' +
-                '<div class="movie-meta">';
-
-            if (movie.year) html += '<span>' + movie.year + '</span>';
-            if (movie.rating) html += '<span class="movie-rating">' + movie.rating + ' IMDb</span>';
-
-            html += '</div></div></a></article>';
-        });
-
-        container.innerHTML = html;
+        } catch (e) {
+            console.error('Failed to load For Me section:', e);
+        }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initHomeForMe);
-    } else {
-        initHomeForMe();
-    }
+    // Initialize For Me after a short delay
+    setTimeout(initForMeSection, 500);
+
 })();
 </script>
 {% endblock %}
