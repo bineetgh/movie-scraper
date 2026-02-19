@@ -140,6 +140,21 @@ async def lifespan(app: FastAPI):
     # Initialize cache (Redis if REDIS_URL set, otherwise in-memory)
     await init_cache()
 
+    # Check if MongoDB data is stale (> 7 days) and trigger background scrape
+    if movie_repo is not None:
+        try:
+            is_stale = await movie_repo.is_cache_stale(ttl_seconds=SCRAPE_INTERVAL_SECONDS)
+            if is_stale:
+                logger.info("MongoDB data is stale (> 7 days), starting background scrape...")
+                start_background_scrape()
+            else:
+                last_refresh = await movie_repo.get_last_refresh()
+                if last_refresh:
+                    age_days = (datetime.utcnow() - last_refresh).total_seconds() / 86400
+                    logger.info(f"MongoDB data is fresh (last refresh: {age_days:.1f} days ago)")
+        except Exception as e:
+            logger.error(f"Failed to check MongoDB staleness: {e}")
+
     # Initialize scheduler for incremental updates
     if INCREMENTAL_UPDATE_ENABLED and movie_repo is not None:
         scheduler = AsyncIOScheduler()
@@ -354,13 +369,7 @@ def start_background_scrape():
 
 
 def get_cached_movies() -> List[Movie]:
-    """Get movies from cache. Triggers background scrape if needed (> 7 days)."""
-    # Check if we need to scrape (> 7 days since last scrape)
-    if cache.needs_scrape() and not cache._is_fetching:
-        logger.info("Cache needs scrape (> 7 days), starting background scrape...")
-        start_background_scrape()
-
-    # Always return immediately with whatever we have (never block)
+    """Get movies from file cache. Never triggers scraping - just returns cached data."""
     return cache.get_movies()
 
 
