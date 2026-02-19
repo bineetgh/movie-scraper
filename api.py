@@ -44,6 +44,10 @@ HOME_PAGE_CACHE_TTL = 1800  # 30 minutes (for free movies section)
 _section_cache: Dict[str, Tuple[float, List]] = {}  # {section_name: (timestamp, data)}
 SECTION_CACHE_TTL = 86400  # 24 hours for other sections
 
+# For-me movies cache (all movies for client-side recommendations)
+_for_me_cache: Optional[Tuple[float, List]] = None
+FOR_ME_CACHE_TTL = 3600  # 1 hour
+
 
 def load_env_file():
     """Load environment variables from .env file if it exists."""
@@ -730,9 +734,19 @@ async def get_all_home_sections():
 
     results = await asyncio.gather(*[fetch_section(name) for name in section_names])
 
-    # Also fetch for-me data
-    all_movies = await get_movies_from_db_or_cache()
-    for_me_data = [movie_to_dict(m) for m in all_movies]
+    # Also fetch for-me data (cached for 1 hour)
+    global _for_me_cache
+    for_me_data = []
+
+    if _for_me_cache:
+        cache_time, cached_data = _for_me_cache
+        if (time.time() - cache_time) < FOR_ME_CACHE_TTL:
+            for_me_data = cached_data
+
+    if not for_me_data:
+        all_movies = await get_movies_from_db_or_cache()
+        for_me_data = [movie_to_dict(m) for m in all_movies]
+        _for_me_cache = (time.time(), for_me_data)
 
     return {
         "sections": [r for r in results if r["movies"]],
