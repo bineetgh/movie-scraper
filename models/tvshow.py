@@ -46,6 +46,9 @@ class TVShow:
     status: Optional[str] = None  # Returning Series, Ended, Canceled, etc.
     episode_runtime: Optional[int] = None  # Average episode runtime in minutes
 
+    # Database timestamps
+    updated_at: Optional[datetime] = None
+
     # Structured streaming offers
     streaming: StreamingAvailability = field(default_factory=StreamingAvailability)
 
@@ -179,5 +182,6 @@ class TVShow:
             last_air_date=doc.get("last_air_date"),
             status=doc.get("status"),
             episode_runtime=doc.get("episode_runtime"),
+            updated_at=doc.get("updated_at"),
             streaming=StreamingAvailability.from_document(doc.get("streaming", {})),
         )

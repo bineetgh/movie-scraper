@@ -40,6 +40,9 @@ class Movie:
     vote_count: Optional[int] = None
     release_date: Optional[str] = None  # ISO format: YYYY-MM-DD
 
+    # Database timestamps
+    updated_at: Optional[datetime] = None
+
     # Structured streaming offers
     streaming: StreamingAvailability = field(default_factory=StreamingAvailability)
 
@@ -199,5 +202,6 @@ class Movie:
             popularity=doc.get("popularity"),
             vote_count=doc.get("vote_count"),
             release_date=doc.get("release_date"),
+            updated_at=doc.get("updated_at"),
             streaming=StreamingAvailability.from_document(doc.get("streaming", {})),
         )

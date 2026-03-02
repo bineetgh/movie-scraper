@@ -1548,6 +1548,8 @@ async def sitemap():
         ("/random-picks", "0.8", "daily"),
         ("/browse", "0.9", "daily"),
         ("/for-me", "0.8", "daily"),
+        ("/genres", "0.85", "weekly"),
+        ("/tv/browse", "0.9", "daily"),
     ]
 
     for path, priority, freq in static_pages:
@@ -1558,14 +1560,44 @@ async def sitemap():
     <priority>{priority}</priority>
   </url>\n"""
 
+    # Genre pages
+    genres = [
+        "action", "comedy", "drama", "horror", "romance", "thriller",
+        "sci-fi", "documentary", "animation", "adventure", "crime",
+        "fantasy", "mystery", "family", "war", "western", "musical"
+    ]
+    for genre in genres:
+        xml_content += f"""  <url>
+    <loc>{BASE_URL}/genre/{genre}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>\n"""
+
     # Movie pages
     for movie in movies:
+        movie_lastmod = movie.updated_at.strftime("%Y-%m-%d") if movie.updated_at else today
         xml_content += f"""  <url>
     <loc>{BASE_URL}{movie.canonical_url}</loc>
-    <lastmod>{today}</lastmod>
+    <lastmod>{movie_lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>\n"""
+
+    # TV show pages
+    if tvshow_repo:
+        try:
+            tv_shows, _ = await tvshow_repo.get_all(limit=1000)
+            for show in tv_shows:
+                show_lastmod = show.updated_at.strftime("%Y-%m-%d") if show.updated_at else today
+                xml_content += f"""  <url>
+    <loc>{BASE_URL}/tv/{show.slug}</loc>
+    <lastmod>{show_lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>\n"""
+        except Exception as e:
+            logger.warning(f"Failed to fetch TV shows for sitemap: {e}")
 
     xml_content += '</urlset>'
 
@@ -1587,11 +1619,16 @@ Allow: /
 
 Sitemap: {BASE_URL}/sitemap.xml
 
-# Disallow API endpoints for crawlers
+# Disallow non-content endpoints to save crawl budget
+Disallow: /api/
+Disallow: /api
 Disallow: /movies
 Disallow: /refresh
 Disallow: /health
-Disallow: /api
+Disallow: /admin/
+Disallow: /admin
+Disallow: /_
+Disallow: /static/
 """
     return Response(content=content, media_type="text/plain")
 
@@ -2351,7 +2388,7 @@ async def admin_import_list_from_json(request: Request):
         return {"success": False, "error": str(e)}
 
 
-async def _fetch_and_add_movie_from_tmdb(tmdb: TMDBClient, title: str, year: int = None) -> str | None:
+async def _fetch_and_add_movie_from_tmdb(tmdb: TMDBClient, title: str, year: int = None) -> Optional[str]:
     """Fetch a movie from TMDB and add it to the database. Returns slug if successful."""
     if not tmdb.is_available:
         logger.warning("TMDB API not configured - cannot fetch missing movies")
@@ -2388,7 +2425,7 @@ async def _fetch_and_add_movie_from_tmdb(tmdb: TMDBClient, title: str, year: int
     return None
 
 
-async def _find_matching_movie(title: str, year: int = None) -> str | None:
+async def _find_matching_movie(title: str, year: int = None) -> Optional[str]:
     """Find a matching movie in the database by title and optionally year."""
     if movie_repo is None:
         return None

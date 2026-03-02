@@ -15,12 +15,12 @@
 {% block content %}
 <section>
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-        <h2 style="font-size: 1.3rem; color: var(--text); margin: 0;">
+        <h1 style="font-size: 1.3rem; color: var(--text); margin: 0;">
             Random Picks
             <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400; margin-left: 10px;">
                 {{ movies | length }} movies
             </span>
-        </h2>
+        </h1>
         <button onclick="window.location.reload()" class="refresh-btn" style="
             background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
             border: none;
