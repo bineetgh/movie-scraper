@@ -8,7 +8,13 @@
     "name": "{{ show.title }}",
     "description": "{{ show.synopsis | default('') | e }}",
     "datePublished": "{{ show.year }}",
-    {% if show.rating %}"aggregateRating": {"@type": "AggregateRating", "ratingValue": {{ show.rating }}},{% endif %}
+    {% if show.rating %}"aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ show.rating }}",
+        "bestRating": "10",
+        "worstRating": "1",
+        "ratingCount": "{{ show.vote_count | default(1000) }}"
+    },{% endif %}
     "url": "{{ base_url }}{{ show.canonical_url }}"
 }
 </script>

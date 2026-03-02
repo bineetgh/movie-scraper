@@ -34,7 +34,8 @@
         "@type": "AggregateRating",
         "ratingValue": "{{ movie.rating }}",
         "bestRating": "10",
-        "worstRating": "1"
+        "worstRating": "1",
+        "ratingCount": "{{ movie.vote_count | default(1000) }}"
     },
     {% endif %}
     {% if movie.runtime_minutes %}

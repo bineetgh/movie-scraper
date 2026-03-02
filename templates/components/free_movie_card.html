@@ -69,7 +69,7 @@
             <h3 class="movie-title" itemprop="name">{{ movie.title }}</h3>
             <div class="movie-meta">
                 {% if movie.year %}<span itemprop="datePublished">{{ movie.year }}</span>{% endif %}
-                {% if movie.rating %}<span class="movie-rating" itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating"><span itemprop="ratingValue">{{ movie.rating }}</span> IMDb</span>{% endif %}
+                {% if movie.rating %}<span class="movie-rating" itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating"><span itemprop="ratingValue">{{ movie.rating }}</span><meta itemprop="bestRating" content="10"><meta itemprop="worstRating" content="1"><meta itemprop="ratingCount" content="{{ movie.vote_count | default(1000) }}"> IMDb</span>{% endif %}
             </div>
             {% if movie.synopsis %}
             <p class="movie-synopsis" itemprop="description">{{ movie.synopsis[:100] }}{% if movie.synopsis | length > 100 %}...{% endif %}</p>
