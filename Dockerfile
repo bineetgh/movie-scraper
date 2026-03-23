@@ -18,8 +18,8 @@ COPY . .
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Expose port (Digital Ocean App Platform uses 8080 by default)
+# Expose port (Railway provides PORT env var)
 EXPOSE 8080
 
-# Run the application
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run the application - use PORT env var for Railway compatibility
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8080}"]
