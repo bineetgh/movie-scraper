@@ -692,8 +692,7 @@ async def home(request: Request):
 
     await asyncio.gather(fetch_free(), fetch_top_rated())
 
-    response = templates.TemplateResponse("home.html", {
-        "request": request,
+    response = templates.TemplateResponse(request, "home.html", {
         "free_movies": free_movies,
         "top_rated_movies": top_movies,
         "curated_lists": curated_lists,
@@ -853,8 +852,7 @@ async def top_rated(request: Request):
                 reverse=True
             )[:24]
 
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "movies": top_movies,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
@@ -902,8 +900,7 @@ async def movie_detail(request: Request, slug: str):
     if analytics_repo:
         asyncio.create_task(analytics_repo.record_page_view(f"/movie/{slug}", movie_slug=slug))
 
-    return templates.TemplateResponse("movie_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "movie_detail.html", {
         "movie": movie,
         "related_movies": related,
         "curated_lists": curated_lists,
@@ -1070,8 +1067,7 @@ async def browse(
     title_parts.append("Movies - Watchlazy")
     page_title = " ".join(title_parts)
 
-    return templates.TemplateResponse("browse.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "browse.html", {
         "movies": paginated,
         "services": services_list,
         "curated_lists": curated_lists,
@@ -1141,8 +1137,7 @@ async def tv_browse(
 
     total_pages = max(1, (total + per_page - 1) // per_page)
 
-    return templates.TemplateResponse("tv_browse.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "tv_browse.html", {
         "shows": shows,
         "services": services_list,
         "curated_lists": curated_lists,
@@ -1178,8 +1173,7 @@ async def tv_detail(request: Request, slug: str):
     if not show:
         raise HTTPException(status_code=404, detail="TV show not found")
 
-    return templates.TemplateResponse("tv_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "tv_detail.html", {
         "show": show,
         "related_shows": related,
         "curated_lists": curated_lists,
@@ -1236,8 +1230,7 @@ async def genre_page(
 
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
-    return templates.TemplateResponse("genre.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "genre.html", {
         "movies": paginated,
         "genre": genre_display,
         "curated_lists": curated_lists,
@@ -1280,8 +1273,7 @@ async def all_genres_page(request: Request):
     # Sort by count descending
     sorted_genres = sorted(converted_counts.items(), key=lambda x: x[1], reverse=True)
 
-    return templates.TemplateResponse("genres.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "genres.html", {
         "genres": sorted_genres,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
@@ -1323,8 +1315,7 @@ async def search_page(request: Request, q: str = Query("")):
     if analytics_repo and q:
         asyncio.create_task(analytics_repo.record_search(q, len(results)))
 
-    return templates.TemplateResponse("search_results.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "search_results.html", {
         "query": q,
         "results": results,
         "curated_lists": curated_lists,
@@ -1355,8 +1346,7 @@ async def upcoming_movies_page(request: Request):
     today = date.today().isoformat()
     upcoming_movies = [m for m in upcoming_movies if m.release_date and m.release_date >= today]
 
-    return templates.TemplateResponse("upcoming.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "upcoming.html", {
         "movies": upcoming_movies,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
@@ -1394,8 +1384,7 @@ async def upcoming_movie_detail(request: Request, tmdb_id: int):
         except ValueError:
             release_date_formatted = movie.release_date
 
-    return templates.TemplateResponse("upcoming_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "upcoming_detail.html", {
         "movie": movie,
         "release_date_formatted": release_date_formatted,
         "curated_lists": curated_lists,
@@ -1446,8 +1435,7 @@ async def free_movies_page(
 
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
-    return templates.TemplateResponse("free_movies.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "free_movies.html", {
         "movies": paginated,
         "curated_lists": curated_lists,
         "page": page,
@@ -1481,8 +1469,7 @@ async def random_picks_page(request: Request):
             count = min(24, len(movies))
             random_movies = random.sample(movies, count)
 
-    return templates.TemplateResponse("random_picks.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "random_picks.html", {
         "movies": random_movies,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
@@ -1517,8 +1504,7 @@ async def for_me_page(request: Request):
 
     movies_json = json.dumps(movies_data)
 
-    return templates.TemplateResponse("for_me.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "for_me.html", {
         "movies_json": movies_json,
         "curated_lists": curated_lists,
         "base_url": BASE_URL,
@@ -1985,8 +1971,7 @@ async def admin_login_page(request: Request):
     """Admin login page."""
     if verify_admin_key(request):
         return RedirectResponse(url="/admin/dashboard", status_code=302)
-    return templates.TemplateResponse("admin/login.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/login.html", {
         "error": request.query_params.get("error"),
     })
 
@@ -2063,8 +2048,7 @@ async def admin_health(request: Request):
     except Exception:
         pass
 
-    return templates.TemplateResponse("admin/health.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/health.html", {
         "health": health,
         "active_page": "health",
     })
@@ -2119,8 +2103,7 @@ async def admin_analytics(request: Request, days: int = Query(7, ge=1, le=90)):
         except Exception:
             pass
 
-    return templates.TemplateResponse("admin/analytics.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/analytics.html", {
         "days": days,
         "stats": stats,
         "popular_movies": popular_movies,
@@ -2174,8 +2157,7 @@ async def admin_dashboard(request: Request, page: int = Query(1, ge=1), search: 
         except Exception:
             pass
 
-    return templates.TemplateResponse("admin/dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/dashboard.html", {
         "movies": movies,
         "curated_lists": curated_lists,
         "page": page,
@@ -2205,8 +2187,7 @@ async def admin_edit_movie(request: Request, slug: str):
     if not movie:
         raise HTTPException(status_code=404, detail="Movie not found")
 
-    return templates.TemplateResponse("admin/edit_movie.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/edit_movie.html", {
         "movie": movie,
     })
 
@@ -2267,8 +2248,7 @@ async def admin_curated_lists(request: Request):
         except Exception as e:
             logger.error(f"Failed to get curated lists: {e}")
 
-    return templates.TemplateResponse("admin/curated_lists.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/curated_lists.html", {
         "lists": curated_lists,
     })
 
@@ -2489,8 +2469,7 @@ async def admin_edit_list(request: Request, slug: str):
     if not curated_list:
         raise HTTPException(status_code=404, detail="List not found")
 
-    return templates.TemplateResponse("admin/edit_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin/edit_list.html", {
         "list": curated_list,
         "movies": movies,
     })
@@ -2729,8 +2708,7 @@ async def curated_list_page(
     paginated = movies[skip:skip + per_page]
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
-    return templates.TemplateResponse("curated_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "curated_list.html", {
         "list": curated_list,
         "movies": paginated,
         "curated_lists": curated_lists,
