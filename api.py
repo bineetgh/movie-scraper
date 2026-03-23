@@ -112,14 +112,35 @@ def verify_admin_key(request: Request) -> bool:
     return key == ADMIN_ACCESS_KEY and ADMIN_ACCESS_KEY != ""
 
 
+# Menu lists cache
+_menu_lists_cache: Optional[List[CuratedList]] = None
+_menu_lists_cache_time: float = 0
+MENU_LISTS_CACHE_TTL = 300  # 5 minutes
+
+
 async def get_curated_lists_for_menu() -> List[CuratedList]:
-    """Get active curated lists for navigation menu."""
+    """Get active curated lists for navigation menu (cached 5 min)."""
+    global _menu_lists_cache, _menu_lists_cache_time
+
+    # Return cached if valid
+    if _menu_lists_cache is not None and (time.time() - _menu_lists_cache_time) < MENU_LISTS_CACHE_TTL:
+        return _menu_lists_cache
+
     if curated_repo is not None:
         try:
-            return await curated_repo.get_all(active_only=True)
+            _menu_lists_cache = await curated_repo.get_all(active_only=True)
+            _menu_lists_cache_time = time.time()
+            return _menu_lists_cache
         except Exception:
             pass
     return []
+
+
+def invalidate_menu_lists_cache():
+    """Invalidate the menu lists cache when lists are modified."""
+    global _menu_lists_cache, _menu_lists_cache_time
+    _menu_lists_cache = None
+    _menu_lists_cache_time = 0
 
 
 @asynccontextmanager
@@ -2273,6 +2294,7 @@ async def admin_create_list(
                 is_active=True,
             )
             await curated_repo.create(new_list)
+            invalidate_menu_lists_cache()
         except Exception as e:
             logger.error(f"Failed to create curated list: {e}")
 
@@ -2497,6 +2519,7 @@ async def admin_update_list(
                 curated_list.is_active = is_active
                 curated_list.display_order = display_order
                 await curated_repo.update(curated_list)
+                invalidate_menu_lists_cache()
         except Exception as e:
             logger.error(f"Failed to update curated list: {e}")
 
@@ -2554,6 +2577,7 @@ async def admin_delete_list(request: Request, slug: str):
     if curated_repo is not None:
         try:
             await curated_repo.delete(slug)
+            invalidate_menu_lists_cache()
         except Exception as e:
             logger.error(f"Failed to delete curated list: {e}")
 
@@ -2577,13 +2601,8 @@ async def admin_bulk_add_to_list(request: Request):
         if curated_repo is None:
             return {"success": False, "error": "Database not available"}
 
-        added_count = 0
-        for slug in movie_slugs:
-            try:
-                await curated_repo.add_movie(list_slug, slug)
-                added_count += 1
-            except Exception as e:
-                logger.warning(f"Failed to add {slug} to list: {e}")
+        # Use batch operation instead of individual calls
+        added_count = await curated_repo.add_movies_batch(list_slug, movie_slugs)
 
         return {"success": True, "added_count": added_count}
     except Exception as e:
@@ -2689,23 +2708,24 @@ async def curated_list_page(
     """Display a curated list to users."""
     per_page = 24
     curated_list = None
-    movies = []
+    paginated = []
     curated_lists = await get_curated_lists_for_menu()
 
     if curated_repo is not None:
         try:
             curated_list = await curated_repo.get_by_slug(slug)
             if curated_list and curated_list.is_active:
-                movies = await curated_repo.get_movies_for_list(slug, limit=100)
+                # Use DB-level pagination instead of fetching all then slicing
+                skip = (page - 1) * per_page
+                paginated = await curated_repo.get_movies_for_list(slug, limit=per_page, skip=skip)
         except Exception as e:
             logger.error(f"Failed to get curated list: {e}")
 
     if not curated_list or not curated_list.is_active:
         raise HTTPException(status_code=404, detail="List not found")
 
-    total = len(movies)
-    skip = (page - 1) * per_page
-    paginated = movies[skip:skip + per_page]
+    # Get total from curated_list.movie_slugs length (already fetched)
+    total = len(curated_list.movie_slugs) if curated_list else 0
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
 
     return templates.TemplateResponse(request, "curated_list.html", {
